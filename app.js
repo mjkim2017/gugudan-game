@@ -37,6 +37,14 @@ function background() {
   `;
 }
 
+function addTapListener(element, handler) {
+  element.addEventListener("click", handler);
+  element.addEventListener("touchend", event => {
+    event.preventDefault();
+    handler(event);
+  }, { passive: false });
+}
+
 function render() {
   let view = "";
   if (page === 1) {
@@ -61,12 +69,13 @@ function render() {
 }
 
 function bindEvents() {
-  document.querySelector("#start-panel")?.addEventListener("click", () => {
+  const startPanel = document.querySelector("#start-panel");
+  if (startPanel) addTapListener(startPanel, () => {
     page = 2;
     render();
   });
 
-  document.querySelectorAll("[data-level]").forEach(button => button.addEventListener("click", () => {
+  document.querySelectorAll("[data-level]").forEach(button => addTapListener(button, () => {
     selectedLevel = Number(button.dataset.level);
     multiplier = 3;
     makeAnswers();
@@ -74,14 +83,15 @@ function bindEvents() {
     render();
   }));
 
-  document.querySelectorAll("[data-answer-index]").forEach(button => button.addEventListener("click", () => {
+  document.querySelectorAll("[data-answer-index]").forEach(button => addTapListener(button, () => {
     const index = Number(button.dataset.answerIndex);
     feedbackIndex = index;
     feedback = answers[index] === selectedLevel * multiplier ? "correct" : "wrong";
     render();
   }));
 
-  document.querySelector("#next")?.addEventListener("click", () => {
+  const nextButton = document.querySelector("#next");
+  if (nextButton) addTapListener(nextButton, () => {
     if (multiplier < 7) {
       multiplier += 1;
       makeAnswers();
