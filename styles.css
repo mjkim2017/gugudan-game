@@ -41,6 +41,7 @@ body {
 
 .content { position: relative; z-index: 1; min-height: min(540px, 100vh); display: grid; place-items: center; padding: 24px; }
 .panel { width: min(620px, 92vw); padding: 28px 32px; border: 5px solid #ffcadf; border-radius: 38px; background: rgba(255,255,255,.97); text-align: center; box-shadow: 0 10px 0 rgba(92,62,102,.08); }
+.start-panel { cursor: pointer; }
 .panel.blue { border-color: #b6d6ff; } .panel.yellow { border-color: #ffdeaa; }
 h1 { margin: 0; font-size: clamp(32px, 5vw, 48px); }
 p { margin: 14px 0 0; color: #6d5b74; font-size: clamp(16px, 2.5vw, 24px); }
