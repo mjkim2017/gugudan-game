@@ -40,7 +40,7 @@ function background() {
 function render() {
   let view = "";
   if (page === 1) {
-    view = `<section class="panel"><h1>1~2학년 구구단!</h1><p>Space를 누르면 시작해요</p></section><strong class="count">단 하나에 5문제!</strong>`;
+    view = `<section class="panel"><h1>1~2학년 구구단!</h1><p>Space를 누르거나 시작하기를 눌러요</p><button class="next" id="start">시작하기</button></section><strong class="count">단 하나에 5문제!</strong>`;
   } else if (page === 2) {
     const levels = Array.from({ length: 8 }, (_, index) => index + 2)
       .map(level => `<button class="level ${completedLevels.has(level) ? "done" : ""}" data-level="${level}">${level}단</button>`).join("");
@@ -61,6 +61,11 @@ function render() {
 }
 
 function bindEvents() {
+  document.querySelector("#start")?.addEventListener("click", () => {
+    page = 2;
+    render();
+  });
+
   document.querySelectorAll("[data-level]").forEach(button => button.addEventListener("click", () => {
     selectedLevel = Number(button.dataset.level);
     multiplier = 3;
