@@ -5,6 +5,7 @@ const startButton = document.querySelector("#start");
 
 const width = canvas.width;
 const height = canvas.height;
+const targetAltitude = 1000;
 let running = false;
 let score = 0;
 let rocket = null;
@@ -13,11 +14,20 @@ let stars = [];
 let booster = false;
 let keys = { left: false, right: false };
 let frame = 0;
+let shieldCharges = 0;
+let credits = Number(localStorage.getItem("rocketCredits") || 0);
+let upgrades = JSON.parse(localStorage.getItem("rocketUpgrades") || '{"engine":0,"shield":0,"control":0}');
+
+function saveProgress() {
+  localStorage.setItem("rocketCredits", String(credits));
+  localStorage.setItem("rocketUpgrades", JSON.stringify(upgrades));
+}
 
 function reset() {
   score = 0;
   frame = 0;
   rocket = { x: width / 2, y: height - 95, speed: 0 };
+  shieldCharges = upgrades.shield;
   meteors = [];
   stars = Array.from({ length: 70 }, () => ({
     x: Math.random() * width,
@@ -39,6 +49,41 @@ function end() {
   overlay.classList.remove("hidden");
   overlay.innerHTML = `<h2>충돌 감지</h2><p>비행 기록: ${Math.floor(score)}m</p><button id="start">재시작</button>`;
   document.querySelector("#start").addEventListener("click", start);
+}
+
+function upgradeCost(type) {
+  return { engine: 4 + upgrades.engine * 3, shield: 5 + upgrades.shield * 4, control: 3 + upgrades.control * 3 }[type];
+}
+
+function openShop(message = "정비 상점") {
+  running = false;
+  overlay.classList.remove("hidden");
+  overlay.innerHTML = `
+    <h2>${message}</h2>
+    <p>보유 연료: <strong>${credits}</strong></p>
+    <button class="shop-item" data-upgrade="engine">추진력 Lv.${upgrades.engine} · ${upgradeCost("engine")} 연료</button>
+    <button class="shop-item" data-upgrade="shield">보호막 Lv.${upgrades.shield} · ${upgradeCost("shield")} 연료</button>
+    <button class="shop-item" data-upgrade="control">기동 제어 Lv.${upgrades.control} · ${upgradeCost("control")} 연료</button>
+    <button id="launch">다음 임무</button>`;
+  document.querySelectorAll("[data-upgrade]").forEach(button => button.addEventListener("click", () => {
+    const type = button.dataset.upgrade;
+    const cost = upgradeCost(type);
+    if (credits >= cost) {
+      credits -= cost;
+      upgrades[type] += 1;
+      saveProgress();
+      openShop("업그레이드 완료");
+    } else {
+      openShop("연료가 부족합니다");
+    }
+  }));
+  document.querySelector("#launch").addEventListener("click", start);
+}
+
+function complete() {
+  credits += 12;
+  saveProgress();
+  openShop("임무 완료 · +12 연료");
 }
 
 function drawBackground() {
@@ -103,7 +148,7 @@ function drawRocket() {
 
 function addMeteor() {
   const radius = 16 + Math.random() * 20;
-  meteors.push({ x: radius + Math.random() * (width - radius * 2), y: -radius, radius, speed: 2.6 + Math.random() * 2 + score / 700 });
+  meteors.push({ x: radius + Math.random() * (width - radius * 2), y: -radius, radius, speed: Math.max(1.8, 2.6 + Math.random() * 2 + score / 700 - upgrades.control * .2) });
 }
 
 function drawMeteors() {
@@ -121,16 +166,19 @@ function drawMeteors() {
   meteors = meteors.filter(meteor => meteor.y < height + meteor.radius);
 }
 
-function hitMeteor() {
-  return meteors.some(meteor => Math.hypot(rocket.x - meteor.x, rocket.y - meteor.y) < meteor.radius + 18);
+function hitMeteorIndex() {
+  const collisionRadius = Math.max(10, 18 - upgrades.control * 2);
+  return meteors.findIndex(meteor => Math.hypot(rocket.x - meteor.x, rocket.y - meteor.y) < meteor.radius + collisionRadius);
 }
 
 function drawScore() {
   context.fillStyle = "rgba(10, 11, 42, .6)";
-  context.fillRect(16, 16, 154, 46);
+  context.fillRect(16, 16, 210, 72);
   context.fillStyle = "#fff";
   context.font = "bold 23px Malgun Gothic, sans-serif";
-  context.fillText(`높이 ${Math.floor(score)}m`, 27, 47);
+  context.fillText(`높이 ${Math.floor(score)} / ${targetAltitude}m`, 27, 45);
+  context.font = "bold 16px Malgun Gothic, sans-serif";
+  context.fillText(`보호막 ${shieldCharges}`, 27, 70);
 }
 
 function update() {
@@ -139,7 +187,7 @@ function update() {
   if (keys.right) rocket.speed += .35;
   rocket.speed *= .88;
   rocket.x = Math.max(38, Math.min(width - 38, rocket.x + rocket.speed));
-  score += booster ? 1.5 : .55;
+  score += booster ? 1.5 * (1 + upgrades.engine * .3) : .55;
   if (frame % Math.max(30, 65 - Math.floor(score / 80)) === 0) addMeteor();
 }
 
@@ -150,7 +198,14 @@ function loop() {
   drawMeteors();
   drawRocket();
   drawScore();
-  if (hitMeteor()) { end(); return; }
+  const collision = hitMeteorIndex();
+  if (collision >= 0) {
+    if (shieldCharges > 0) {
+      shieldCharges -= 1;
+      meteors.splice(collision, 1);
+    } else { end(); return; }
+  }
+  if (score >= targetAltitude) { complete(); return; }
   requestAnimationFrame(loop);
 }
 
