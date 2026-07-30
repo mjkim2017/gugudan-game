@@ -34,6 +34,7 @@ function reset() {
     y: Math.random() * height,
     size: 1 + Math.random() * 2,
     speed: .5 + Math.random() * 1.5,
+    color: Math.random() > .82 ? "#bfd6ff" : Math.random() > .9 ? "#ffe7b0" : "#ffffff",
   }));
 }
 
@@ -87,14 +88,54 @@ function complete() {
 }
 
 function drawBackground() {
-  context.fillStyle = "#10133a";
+  const space = context.createLinearGradient(0, 0, 0, height);
+  space.addColorStop(0, "#02050e");
+  space.addColorStop(.55, "#09142c");
+  space.addColorStop(1, "#1b3451");
+  context.fillStyle = space;
   context.fillRect(0, 0, width, height);
   for (const star of stars) {
     star.y += star.speed + score / 650;
     if (star.y > height) { star.y = -4; star.x = Math.random() * width; }
-    context.fillStyle = "rgba(255,255,255,.9)";
+    context.fillStyle = star.color;
+    context.globalAlpha = .55 + Math.sin((frame + star.x) / 23) * .35;
     context.fillRect(star.x, star.y, star.size, star.size);
+    context.globalAlpha = 1;
   }
+
+  const earthCenterY = height + 365;
+  const earthRadius = 490;
+  const atmosphere = context.createRadialGradient(width / 2, earthCenterY - earthRadius, 20, width / 2, earthCenterY, earthRadius);
+  atmosphere.addColorStop(.7, "rgba(69, 166, 255, 0)");
+  atmosphere.addColorStop(.91, "rgba(71, 179, 255, .15)");
+  atmosphere.addColorStop(1, "rgba(145, 222, 255, .7)");
+  context.fillStyle = atmosphere;
+  context.beginPath();
+  context.arc(width / 2, earthCenterY, earthRadius, Math.PI, Math.PI * 2);
+  context.fill();
+
+  const earth = context.createRadialGradient(width * .37, height + 105, 20, width / 2, earthCenterY, earthRadius);
+  earth.addColorStop(0, "#6ab8e8");
+  earth.addColorStop(.45, "#1e6095");
+  earth.addColorStop(.82, "#0b2d54");
+  earth.addColorStop(1, "#031426");
+  context.fillStyle = earth;
+  context.beginPath();
+  context.arc(width / 2, earthCenterY, earthRadius - 9, Math.PI, Math.PI * 2);
+  context.fill();
+
+  context.save();
+  context.beginPath();
+  context.arc(width / 2, earthCenterY, earthRadius - 9, Math.PI, Math.PI * 2);
+  context.clip();
+  context.fillStyle = "rgba(236, 249, 255, .35)";
+  for (let index = 0; index < 7; index += 1) {
+    context.beginPath();
+    context.ellipse(45 + index * 78, height - 3 + (index % 2) * 17, 65, 11, -.18, 0, Math.PI * 2);
+    context.fill();
+  }
+  context.restore();
+
   context.fillStyle = "#34455d";
   context.beginPath();
   context.arc(width - 55, 72, 36, 0, Math.PI * 2);
@@ -204,14 +245,16 @@ function drawMeteor(meteor) {
 }
 
 function drawMeteorTrail(meteor) {
-  const trail = context.createLinearGradient(meteor.x, meteor.y - meteor.radius, meteor.x, meteor.y - meteor.radius * 3.6);
-  trail.addColorStop(0, "rgba(255, 154, 73, .7)");
-  trail.addColorStop(1, "rgba(255, 84, 35, 0)");
+  const trailLength = meteor.radius * (3.5 + meteor.speed * .5);
+  const trail = context.createLinearGradient(meteor.x, meteor.y - meteor.radius, meteor.x, meteor.y - trailLength);
+  trail.addColorStop(0, "rgba(255, 234, 180, .95)");
+  trail.addColorStop(.22, "rgba(255, 144, 65, .72)");
+  trail.addColorStop(1, "rgba(255, 65, 28, 0)");
   context.strokeStyle = trail;
-  context.lineWidth = meteor.radius * .8;
+  context.lineWidth = meteor.radius * .9;
   context.beginPath();
   context.moveTo(meteor.x, meteor.y - meteor.radius * .6);
-  context.lineTo(meteor.x - meteor.speed * 2, meteor.y - meteor.radius * 3.5);
+  context.lineTo(meteor.x - meteor.spin * 160, meteor.y - trailLength);
   context.stroke();
 }
 
