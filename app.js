@@ -145,7 +145,8 @@ function homeView() {
     <section class="map-section" aria-labelledby="map-title">
       <div class="section-heading"><div><p class="eyebrow">별자리 지도</p><h2 id="map-title">어느 단을 연습할까?</h2></div><p>${cleared}/${LEVELS.length} 완료</p></div>
       <div class="level-grid">${LEVELS.map(levelCard).join("")}</div>
-    </section>`;
+    </section>
+    <footer class="learning-goal"><strong>나의 학습 목표</strong><span>2단부터 9단까지 별자리를 완성하기</span></footer>`;
 }
 
 function quizView() {
