@@ -108,60 +108,128 @@ function drawBackground() {
 
 function drawRocket() {
   const { x, y } = rocket;
+  context.save();
+  context.translate(x, y);
   if (booster) {
-    context.fillStyle = "#ff9f43";
+    const flame = context.createLinearGradient(0, 30, 0, 95);
+    flame.addColorStop(0, "#fffbd1");
+    flame.addColorStop(.25, "#ffd45e");
+    flame.addColorStop(.65, "#f46b32");
+    flame.addColorStop(1, "rgba(239, 54, 28, 0)");
+    context.fillStyle = flame;
     context.beginPath();
-    context.moveTo(x - 13, y + 33);
-    context.lineTo(x + 13, y + 33);
-    context.lineTo(x, y + 63 + Math.random() * 13);
-    context.fill();
-    context.fillStyle = "#fff067";
-    context.beginPath();
-    context.moveTo(x - 6, y + 32);
-    context.lineTo(x + 6, y + 32);
-    context.lineTo(x, y + 52);
+    context.moveTo(-12, 30);
+    context.lineTo(12, 30);
+    context.lineTo(0, 78 + Math.random() * 18);
     context.fill();
   }
-  context.fillStyle = "#c8d0d6";
+  context.fillStyle = "#893336";
   context.beginPath();
-  context.ellipse(x, y, 20, 34, 0, Math.PI, Math.PI * 2);
-  context.lineTo(x + 20, y + 27);
-  context.lineTo(x - 20, y + 27);
+  context.moveTo(-19, 18);
+  context.lineTo(-44, 43);
+  context.lineTo(-18, 34);
   context.closePath();
   context.fill();
-  context.fillStyle = "#76b9d8";
   context.beginPath();
-  context.arc(x, y - 7, 10, 0, Math.PI * 2);
+  context.moveTo(19, 18);
+  context.lineTo(44, 43);
+  context.lineTo(18, 34);
+  context.closePath();
   context.fill();
-  context.fillStyle = "#943f42";
+
+  const body = context.createLinearGradient(-20, 0, 20, 0);
+  body.addColorStop(0, "#87939c");
+  body.addColorStop(.32, "#f4f6f4");
+  body.addColorStop(.65, "#bac4ca");
+  body.addColorStop(1, "#687780");
+  context.fillStyle = body;
   context.beginPath();
-  context.moveTo(x - 19, y + 16);
-  context.lineTo(x - 37, y + 36);
-  context.lineTo(x - 19, y + 30);
+  context.moveTo(0, -57);
+  context.bezierCurveTo(18, -35, 21, -8, 19, 31);
+  context.lineTo(-19, 31);
+  context.bezierCurveTo(-21, -8, -18, -35, 0, -57);
+  context.closePath();
   context.fill();
+  context.strokeStyle = "#46555d";
+  context.lineWidth = 2;
+  context.stroke();
+
+  context.fillStyle = "#344d5f";
   context.beginPath();
-  context.moveTo(x + 19, y + 16);
-  context.lineTo(x + 37, y + 36);
-  context.lineTo(x + 19, y + 30);
+  context.ellipse(0, -18, 11, 13, 0, 0, Math.PI * 2);
   context.fill();
+  context.strokeStyle = "#a7d5e7";
+  context.lineWidth = 2;
+  context.stroke();
+
+  context.fillStyle = "#1f2930";
+  context.fillRect(-14, 28, 28, 9);
+  context.fillStyle = "#63737c";
+  context.fillRect(-10, 31, 20, 7);
+  context.restore();
+}
+
+function drawMeteor(meteor) {
+  meteor.y += meteor.speed;
+  meteor.rotation += meteor.spin;
+  context.save();
+  context.translate(meteor.x, meteor.y);
+  context.rotate(meteor.rotation);
+  const stone = context.createRadialGradient(-meteor.radius * .3, -meteor.radius * .35, 2, 0, 0, meteor.radius * 1.2);
+  stone.addColorStop(0, "#b1a092");
+  stone.addColorStop(.42, "#76665e");
+  stone.addColorStop(1, "#342c2c");
+  context.fillStyle = stone;
+  context.beginPath();
+  meteor.vertices.forEach((distance, index) => {
+    const angle = (Math.PI * 2 * index) / meteor.vertices.length;
+    const x = Math.cos(angle) * meteor.radius * distance;
+    const y = Math.sin(angle) * meteor.radius * distance;
+    if (index === 0) context.moveTo(x, y); else context.lineTo(x, y);
+  });
+  context.closePath();
+  context.fill();
+  context.strokeStyle = "#d1b39c";
+  context.globalAlpha = .4;
+  context.lineWidth = 1;
+  context.stroke();
+  context.globalAlpha = 1;
+  context.fillStyle = "rgba(39, 30, 28, .55)";
+  for (const crater of meteor.craters) {
+    context.beginPath();
+    context.ellipse(crater.x * meteor.radius, crater.y * meteor.radius, crater.size * meteor.radius, crater.size * meteor.radius * .65, 0, 0, Math.PI * 2);
+    context.fill();
+  }
+  context.restore();
+}
+
+function drawMeteorTrail(meteor) {
+  const trail = context.createLinearGradient(meteor.x, meteor.y - meteor.radius, meteor.x, meteor.y - meteor.radius * 3.6);
+  trail.addColorStop(0, "rgba(255, 154, 73, .7)");
+  trail.addColorStop(1, "rgba(255, 84, 35, 0)");
+  context.strokeStyle = trail;
+  context.lineWidth = meteor.radius * .8;
+  context.beginPath();
+  context.moveTo(meteor.x, meteor.y - meteor.radius * .6);
+  context.lineTo(meteor.x - meteor.speed * 2, meteor.y - meteor.radius * 3.5);
+  context.stroke();
 }
 
 function addMeteor() {
   const radius = 16 + Math.random() * 20;
-  meteors.push({ x: radius + Math.random() * (width - radius * 2), y: -radius, radius, speed: Math.max(1.8, 2.6 + Math.random() * 2 + score / 700 - upgrades.control * .2) });
+  meteors.push({
+    x: radius + Math.random() * (width - radius * 2), y: -radius, radius,
+    speed: Math.max(1.8, 2.6 + Math.random() * 2 + score / 700 - upgrades.control * .2),
+    rotation: Math.random() * Math.PI * 2, spin: (Math.random() - .5) * .07,
+    vertices: Array.from({ length: 8 }, () => .78 + Math.random() * .26),
+    craters: Array.from({ length: 3 }, () => ({ x: (Math.random() - .5) * 1.15, y: (Math.random() - .5) * 1.15, size: .11 + Math.random() * .11 })),
+  });
 }
 
 function drawMeteors() {
   for (const meteor of meteors) {
-    meteor.y += meteor.speed;
-    context.fillStyle = "#9e6d71";
-    context.beginPath();
-    context.arc(meteor.x, meteor.y, meteor.radius, 0, Math.PI * 2);
-    context.fill();
-    context.fillStyle = "#c49184";
-    context.beginPath();
-    context.arc(meteor.x - meteor.radius * .25, meteor.y - meteor.radius * .2, meteor.radius * .25, 0, Math.PI * 2);
-    context.fill();
+    drawMeteorTrail(meteor);
+    drawMeteor(meteor);
   }
   meteors = meteors.filter(meteor => meteor.y < height + meteor.radius);
 }
