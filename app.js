@@ -120,7 +120,7 @@ function header() {
   const cleared = LEVELS.filter(table => progress[table]?.cleared).length;
   return `
     <header class="topbar">
-      <a class="brand" href="index.html" aria-label="별빛 곱셈 탐험대 첫 화면">✦ 별빛 탐험대</a>
+      <a class="brand" href="index.html" aria-label="곱셈 별자리 첫 화면">✦ 곱셈 별자리</a>
       <div class="collection" aria-label="완료한 단 ${cleared}개">획득한 별 <b>${cleared}</b> / ${LEVELS.length}</div>
     </header>`;
 }
