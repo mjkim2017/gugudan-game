@@ -122,7 +122,6 @@ function header() {
     <header class="topbar">
       <a class="brand" href="index.html" aria-label="별빛 곱셈 탐험대 첫 화면">✦ 별빛 탐험대</a>
       <div class="collection" aria-label="완료한 단 ${cleared}개">획득한 별 <b>${cleared}</b> / ${LEVELS.length}</div>
-      <a class="rocket-link" href="rocket.html">🚀 로켓 놀이</a>
     </header>`;
 }
 
