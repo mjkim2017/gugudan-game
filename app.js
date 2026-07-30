@@ -1,117 +1,214 @@
 const app = document.querySelector("#app");
+const LEVELS = [2, 3, 4, 5, 6, 7, 8, 9];
+const QUESTIONS_PER_ROUND = 5;
 
-let page = 1;
-let selectedLevel = 2;
-let multiplier = 3;
-let answers = [];
-let feedback = null;
-let feedbackIndex = null;
-const completedLevels = new Set();
+let screen = "home";
+let level = 2;
+let questions = [];
+let questionIndex = 0;
+let score = 0;
+let streak = 0;
+let roundStars = 0;
+let selectedAnswer = null;
+let isCorrect = null;
 
-function shuffle(values) {
-  const result = [...values];
-  for (let index = result.length - 1; index > 0; index -= 1) {
-    const other = Math.floor(Math.random() * (index + 1));
-    [result[index], result[other]] = [result[other], result[index]];
+function loadProgress() {
+  try {
+    return JSON.parse(localStorage.getItem("starlight-multiplication-progress")) || {};
+  } catch {
+    return {};
+  }
+}
+
+let progress = loadProgress();
+
+function saveProgress() {
+  localStorage.setItem("starlight-multiplication-progress", JSON.stringify(progress));
+}
+
+function shuffle(items) {
+  const result = [...items];
+  for (let i = result.length - 1; i > 0; i -= 1) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [result[i], result[j]] = [result[j], result[i]];
   }
   return result;
 }
 
-function makeAnswers() {
-  answers = shuffle([
-    selectedLevel * multiplier,
-    selectedLevel * (multiplier - 1),
-    selectedLevel * (multiplier + 1),
-    selectedLevel * (multiplier + 2),
-  ]);
-  feedback = null;
-  feedbackIndex = null;
+function makeQuestion(table, multiplier) {
+  const answer = table * multiplier;
+  const candidates = new Set([answer]);
+  const offsets = shuffle([-3, -2, -1, 1, 2, 3, 4]);
+  offsets.forEach(offset => {
+    if (candidates.size < 4 && answer + offset * table > 0) {
+      candidates.add(answer + offset * table);
+    }
+  });
+  let fallback = 1;
+  while (candidates.size < 4) {
+    candidates.add(answer + fallback);
+    fallback += 1;
+  }
+  return { multiplier, answer, choices: shuffle([...candidates]) };
 }
 
-function background() {
+function startRound(nextLevel) {
+  level = nextLevel;
+  const multipliers = shuffle([1, 2, 3, 4, 5, 6, 7, 8, 9]).slice(0, QUESTIONS_PER_ROUND);
+  questions = multipliers.map(multiplier => makeQuestion(level, multiplier));
+  questionIndex = 0;
+  score = 0;
+  streak = 0;
+  roundStars = 0;
+  selectedAnswer = null;
+  isCorrect = null;
+  screen = "quiz";
+  render();
+}
+
+function finishRound() {
+  const previous = progress[level] || { best: 0, cleared: false };
+  progress[level] = {
+    best: Math.max(previous.best, score),
+    cleared: previous.cleared || score >= 3,
+  };
+  saveProgress();
+  screen = "result";
+  render();
+}
+
+function chooseAnswer(answer) {
+  if (selectedAnswer !== null) return;
+  const question = questions[questionIndex];
+  selectedAnswer = answer;
+  isCorrect = answer === question.answer;
+  if (isCorrect) {
+    score += 1;
+    streak += 1;
+    roundStars += streak >= 3 ? 2 : 1;
+  } else {
+    streak = 0;
+  }
+  render();
+}
+
+function nextQuestion() {
+  if (questionIndex + 1 === questions.length) {
+    finishRound();
+    return;
+  }
+  questionIndex += 1;
+  selectedAnswer = null;
+  isCorrect = null;
+  render();
+}
+
+function levelCard(table) {
+  const item = progress[table] || { best: 0, cleared: false };
+  const state = item.cleared ? "cleared" : "";
+  const mark = item.cleared ? "완료" : "도전";
   return `
-    <div class="cloud one"></div><div class="cloud two"></div>
-    <i class="sparkle s1"></i><i class="sparkle s2"></i><i class="sparkle s3"></i>
-    <div class="hill left"></div><div class="hill right"></div><div class="grass"></div>
-    <span class="flower f1">🌼</span><span class="flower f2">🌷</span><span class="flower f3">🌼</span><span class="flower f4">🌷</span>
-  `;
+    <button class="level-card ${state}" data-level="${table}" aria-label="${table}단 ${mark}">
+      <span class="level-orbit">${table}</span>
+      <strong>${table}단</strong>
+      <small>${item.best ? `최고 ${item.best}/${QUESTIONS_PER_ROUND}` : "별을 모아 봐!"}</small>
+      <span class="level-status">${item.cleared ? "★ 완료" : "시작하기"}</span>
+    </button>`;
 }
 
-function addTapListener(element, handler) {
-  element.addEventListener("click", handler);
-  element.addEventListener("touchend", event => {
-    event.preventDefault();
-    handler(event);
-  }, { passive: false });
+function header() {
+  const cleared = LEVELS.filter(table => progress[table]?.cleared).length;
+  return `
+    <header class="topbar">
+      <a class="brand" href="index.html" aria-label="별빛 곱셈 탐험대 첫 화면">✦ 별빛 탐험대</a>
+      <div class="collection" aria-label="완료한 단 ${cleared}개">획득한 별 <b>${cleared}</b> / ${LEVELS.length}</div>
+      <a class="rocket-link" href="rocket.html">🚀 로켓 놀이</a>
+    </header>`;
+}
+
+function homeView() {
+  const cleared = LEVELS.filter(table => progress[table]?.cleared).length;
+  return `
+    ${header()}
+    <section class="hero" aria-labelledby="game-title">
+      <div class="hero-copy">
+        <p class="eyebrow">오늘의 수학 모험</p>
+        <h1 id="game-title">곱셈 별자리를<br><em>완성해 보자!</em></h1>
+        <p class="hero-description">문제를 풀고 별을 모아 2단부터 9단까지 탐험해요. 세 문제 연속 정답이면 보너스 별도 받아요.</p>
+        <button class="primary-button" id="quick-start">${cleared === LEVELS.length ? "다시 탐험하기" : "가장 쉬운 곳부터"} <span>→</span></button>
+      </div>
+      <div class="planet-card" aria-hidden="true">
+        <div class="ring"></div><div class="planet">✦</div>
+        <span class="float-star star-one">★</span><span class="float-star star-two">✦</span><span class="float-star star-three">✧</span>
+        <p>${cleared}개의 별자리를 밝혔어요</p>
+      </div>
+    </section>
+    <section class="map-section" aria-labelledby="map-title">
+      <div class="section-heading"><div><p class="eyebrow">별자리 지도</p><h2 id="map-title">어느 단을 연습할까?</h2></div><p>${cleared}/${LEVELS.length} 완료</p></div>
+      <div class="level-grid">${LEVELS.map(levelCard).join("")}</div>
+    </section>`;
+}
+
+function quizView() {
+  const question = questions[questionIndex];
+  const answered = selectedAnswer !== null;
+  const feedback = isCorrect ? "정답이에요! 별 하나를 얻었어요." : `아쉬워요. ${level} × ${question.multiplier} = ${question.answer}예요.`;
+  const choices = question.choices.map((choice, index) => {
+    const chosen = choice === selectedAnswer;
+    const correct = answered && choice === question.answer;
+    const status = correct ? "correct" : chosen ? "wrong" : "";
+    return `<button class="answer ${status}" data-answer="${choice}" ${answered ? "disabled" : ""}><span>${index + 1}</span>${choice}</button>`;
+  }).join("");
+  return `
+    ${header()}
+    <section class="quiz-shell" aria-labelledby="question-title">
+      <div class="quiz-topline"><button class="back-button" id="back-home">← 지도</button><span>${level}단 탐험</span><span>★ ${roundStars}</span></div>
+      <div class="progress-track" aria-label="${questionIndex + 1} / ${QUESTIONS_PER_ROUND} 문제"><i style="width:${((questionIndex + 1) / QUESTIONS_PER_ROUND) * 100}%"></i></div>
+      <p class="question-count">문제 ${questionIndex + 1} / ${QUESTIONS_PER_ROUND}</p>
+      <div class="question-card">
+        <p class="eyebrow">정답을 골라 주세요</p>
+        <h1 id="question-title">${level} <b>×</b> ${question.multiplier} <b>=</b> <span>?</span></h1>
+        <p class="visual-hint">${"●".repeat(Math.min(level, 9))} 가 ${question.multiplier}묶음이에요.</p>
+        <div class="answer-grid">${choices}</div>
+        ${answered ? `<div class="feedback ${isCorrect ? "good" : "try"}" role="status"><strong>${isCorrect ? "✨" : "💡"}</strong><p>${feedback}</p><button class="primary-button" id="next-question">${questionIndex + 1 === QUESTIONS_PER_ROUND ? "탐험 결과 보기" : "다음 문제"} <span>→</span></button></div>` : `<p class="keyboard-tip">키보드 숫자 1–4로도 답할 수 있어요.</p>`}
+      </div>
+    </section>`;
+}
+
+function resultView() {
+  const cleared = score >= 3;
+  const title = cleared ? `${level}단 별자리 완성!` : "조금만 더 연습해 볼까?";
+  const message = cleared ? `${score}문제를 맞혀 ${roundStars}개의 별을 모았어요.` : `${score}문제를 맞혔어요. 3문제 이상 맞히면 별자리가 완성돼요.`;
+  return `
+    ${header()}
+    <section class="result-shell">
+      <div class="result-card ${cleared ? "celebrate" : ""}">
+        <div class="result-stars">${cleared ? "★ ★ ★" : "✦ ✧ ✧"}</div>
+        <p class="eyebrow">탐험 결과</p><h1>${title}</h1><p>${message}</p>
+        <div class="score-badge"><strong>${score}</strong><span>/ ${QUESTIONS_PER_ROUND}<br>정답</span></div>
+        <div class="result-actions"><button class="primary-button" id="retry">${cleared ? "한 번 더 풀기" : "다시 도전하기"} <span>↻</span></button><button class="secondary-button" id="open-map">별자리 지도</button></div>
+      </div>
+    </section>`;
 }
 
 function render() {
-  let view = "";
-  if (page === 1) {
-    view = `<section class="panel start-panel" id="start-panel"><h1>1~2학년 구구단!</h1><p>Space를 누르거나 이 카드를 눌러요</p><button class="next">시작하기</button></section><strong class="count">단 하나에 5문제!</strong>`;
-  } else if (page === 2) {
-    const levels = Array.from({ length: 8 }, (_, index) => index + 2)
-      .map(level => `<button class="level ${completedLevels.has(level) ? "done" : ""}" data-level="${level}">${level}단</button>`).join("");
-    view = `<section class="panel blue"><h1>몇 단을 연습할까요?</h1><p class="hint">원하는 숫자를 골라 보세요!</p><div class="level-grid">${levels}</div><p class="hint">Esc를 누르면 처음 화면으로 돌아가요</p></section>`;
-  } else if (page === 8) {
-    view = `<section class="panel yellow"><div class="stars">★ ★ ★</div><h1>구구단 완료!</h1><p>2단부터 9단까지 모두 풀었어요!</p><p>정말 잘했어요!</p></section>`;
-  } else {
-    const answerButtons = answers.map((answer, index) => {
-      const mark = feedbackIndex === index ? `<span class="mark ${feedback}">${feedback === "correct" ? "O" : "X"}</span>` : "";
-      return `<button class="answer" data-answer-index="${index}">${answer}${mark}</button>`;
-    }).join("");
-    const next = feedback === "correct" ? `<button class="next" id="next">${multiplier < 7 ? "다음 문제 ▶" : "완료하기"}</button>` : "";
-    view = `<section class="panel yellow"><span class="question-number">${multiplier - 2}문제</span><h1>${selectedLevel} × ${multiplier} = ?</h1><p class="hint">알맞은 답을 눌러 보세요!</p><div class="answer-grid">${answerButtons}</div>${next}</section>`;
-  }
-
-  app.innerHTML = `<div class="game">${background()}<div class="content">${view}</div></div>`;
-  bindEvents();
-}
-
-function bindEvents() {
-  const startPanel = document.querySelector("#start-panel");
-  if (startPanel) addTapListener(startPanel, () => {
-    page = 2;
-    render();
-  });
-
-  document.querySelectorAll("[data-level]").forEach(button => addTapListener(button, () => {
-    selectedLevel = Number(button.dataset.level);
-    multiplier = 3;
-    makeAnswers();
-    page = 3;
-    render();
-  }));
-
-  document.querySelectorAll("[data-answer-index]").forEach(button => addTapListener(button, () => {
-    const index = Number(button.dataset.answerIndex);
-    feedbackIndex = index;
-    feedback = answers[index] === selectedLevel * multiplier ? "correct" : "wrong";
-    render();
-  }));
-
-  const nextButton = document.querySelector("#next");
-  if (nextButton) addTapListener(nextButton, () => {
-    if (multiplier < 7) {
-      multiplier += 1;
-      makeAnswers();
-    } else {
-      completedLevels.add(selectedLevel);
-      page = completedLevels.size === 8 ? 8 : 2;
-      feedback = null;
-    }
-    render();
-  });
+  app.innerHTML = `<div class="sky">${screen === "home" ? homeView() : screen === "quiz" ? quizView() : resultView()}</div>`;
+  document.querySelectorAll("[data-level]").forEach(button => button.addEventListener("click", () => startRound(Number(button.dataset.level))));
+  document.querySelector("#quick-start")?.addEventListener("click", () => startRound(LEVELS.find(table => !progress[table]?.cleared) || 2));
+  document.querySelectorAll("[data-answer]").forEach(button => button.addEventListener("click", () => chooseAnswer(Number(button.dataset.answer))));
+  document.querySelector("#next-question")?.addEventListener("click", nextQuestion);
+  document.querySelector("#back-home")?.addEventListener("click", () => { screen = "home"; render(); });
+  document.querySelector("#retry")?.addEventListener("click", () => startRound(level));
+  document.querySelector("#open-map")?.addEventListener("click", () => { screen = "home"; render(); });
 }
 
 window.addEventListener("keydown", event => {
-  if (event.code === "Space" && page === 1) {
-    event.preventDefault();
-    page = 2;
-    render();
+  if (screen === "quiz" && selectedAnswer === null && /^[1-4]$/.test(event.key)) {
+    const answer = questions[questionIndex].choices[Number(event.key) - 1];
+    chooseAnswer(answer);
   }
-  if (event.key === "Escape") {
-    page = 1;
+  if (event.key === "Escape" && screen !== "home") {
+    screen = "home";
     render();
   }
 });
