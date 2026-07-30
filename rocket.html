@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+    <title>로켓 발사</title>
+    <link rel="stylesheet" href="rocket.css?v=20260730-1" />
+  </head>
+  <body>
+    <main class="rocket-game">
+      <header>
+        <a href="index.html">← 구구단</a>
+        <h1>로켓 발사</h1>
+        <p>화면을 누른 채 로켓을 조종하고, Space로 부스터를 가동하세요.</p>
+      </header>
+      <section class="game-frame" aria-label="로켓 발사 게임">
+        <canvas id="game" width="480" height="640"></canvas>
+        <div id="overlay" class="overlay">
+          <h2>발사 준비</h2>
+          <p>운석 충돌을 피하며 고도를 올리세요.</p>
+          <button id="start">발사</button>
+        </div>
+      </section>
+      <p class="how-to">터치: 로켓 이동 · Space: 부스터 · 운석 충돌 시 임무 종료</p>
+    </main>
+    <script src="rocket.js?v=20260730-1"></script>
+  </body>
+</html>
