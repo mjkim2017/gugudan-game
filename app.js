@@ -1,165 +1,153 @@
 const app = document.querySelector("#app");
 
+const map = [
+  [1,1,1,1,1,1,1,1,1,1],
+  [1,0,0,0,1,0,0,0,0,1],
+  [1,0,1,0,1,0,1,1,0,1],
+  [1,0,1,0,0,0,0,1,0,1],
+  [1,0,1,1,1,1,0,1,0,1],
+  [1,0,0,0,0,1,0,0,0,1],
+  [1,1,1,1,0,1,1,1,0,1],
+  [1,0,0,1,0,0,0,1,0,1],
+  [1,0,0,0,0,1,0,0,0,1],
+  [1,1,1,1,1,1,1,1,1,1],
+];
+
 const state = {
-  room: "hall",
-  flashlight: false,
-  key: false,
-  clockSeen: false,
-  photoSeen: false,
-  noteSeen: false,
-  codeSolved: false,
-  keypad: false,
-  entered: "",
-  strikes: 0,
-  ghost: false,
-  ghostEncountered: false,
-  drawerOpen: false,
-  heardWhisper: false,
-  message: "비가 창문을 두드린다. 이 집에서 나가야 한다.",
-  ending: "",
+  x: 2.5, y: 8.5, angle: 0,
+  keys: {}, flashlight: false, code: false, escaped: false,
+  notice: "낡은 집에 갇혔다. 손전등부터 찾아야 한다.",
+  lastTime: 0,
 };
 
-const rooms = {
-  hall: { name: "현관", art: "hall", text: "잠긴 현관문과 오래된 신발장. 문 너머에서 누군가 발을 끌고 지나간다." },
-  study: { name: "서재", art: "study", text: "먼지 쌓인 책장과 멈춘 벽시계. 시곗바늘은 3시 17분에 멎어 있다." },
-  bedroom: { name: "침실", art: "bedroom", text: "침대 아래가 유난히 어둡다. 벽에는 찢어진 가족사진이 걸려 있다." },
-  kitchen: { name: "부엌", art: "kitchen", text: "냉장고가 혼자 웅웅거린다. 식탁 위 메모가 젖어 있다." },
-};
+const objects = [
+  { id: "flashlight", x: 1.5, y: 1.5, label: "손전등", color: "#f6d76b" },
+  { id: "note", x: 8.5, y: 1.5, label: "찢어진 메모", color: "#db8b72" },
+  { id: "door", x: 8.5, y: 8.5, label: "현관문", color: "#70483d" },
+];
 
-function reset() {
-  Object.assign(state, { room: "hall", flashlight: false, key: false, clockSeen: false, photoSeen: false, noteSeen: false, codeSolved: false, keypad: false, entered: "", strikes: 0, ghost: false, ghostEncountered: false, drawerOpen: false, heardWhisper: false, message: "비가 창문을 두드린다. 이 집에서 나가야 한다.", ending: "" });
-  render();
-}
+function setup() {
+  app.innerHTML = `
+    <section class="game-shell">
+      <header><div><p>ESCAPE ROOM · 03:17 AM</p><h1>새벽 3시의 집</h1></div><span class="help">WASD / 방향키 이동 · 마우스로 둘러보기 · E 조사</span></header>
+      <div class="viewport"><canvas id="game" aria-label="1인칭 3D 공포 탈출 게임"></canvas><div class="crosshair">+</div><div id="prompt" class="prompt"></div></div>
+      <section class="bottom-ui"><div class="mission"><p>MISSION</p><ol><li id="mission-1"><b>01</b> 손전등 찾기</li><li id="mission-2"><b>02</b> 비밀번호 알기</li><li id="mission-3"><b>03</b> 현관문 열기</li></ol></div><div class="notice" id="notice"></div><div class="controls"><button data-key="ArrowLeft">↶</button><button data-key="ArrowUp">▲</button><button data-key="ArrowRight">↷</button><button data-key="KeyE">조사 E</button></div></section>
+    </section>`;
+  const canvas = document.querySelector("#game");
+  const ctx = canvas.getContext("2d");
+  const prompt = document.querySelector("#prompt");
 
-function go(room) {
-  state.room = room;
-  state.message = rooms[room].text;
-  render();
-}
+  function resize() {
+    const rect = canvas.getBoundingClientRect();
+    canvas.width = Math.max(320, Math.floor(rect.width * devicePixelRatio));
+    canvas.height = Math.max(240, Math.floor(rect.height * devicePixelRatio));
+    ctx.setTransform(devicePixelRatio, 0, 0, devicePixelRatio, 0, 0);
+  }
+  addEventListener("resize", resize); resize();
 
-function inspect(target) {
-  if (target === "clock") {
-    if (!state.flashlight) state.message = "유리 너머가 너무 어둡다. 시곗바늘조차 보이지 않는다.";
-    else { state.clockSeen = true; state.message = "손전등 불빛 아래 시곗바늘이 보인다. 시계는 3시 17분에서 멎어 있다. ‘17’이라는 숫자가 유난히 선명하다."; }
-  }
-  if (target === "books") {
-    state.message = state.flashlight ? "책 사이에 오래된 영수증이 있다. ‘열쇠는 가장 가까운 곳에. 하지만 사진을 먼저 보지 말 것.’" : "너무 어두워서 책등의 글자가 보이지 않는다.";
-  }
-  if (target === "bed") {
-    if (!state.ghostEncountered) { state.ghostEncountered = true; state.ghost = true; state.message = "침대 밑에서 얼굴이 튀어나왔다. 방금 당신을 본 것 같다."; }
-    else if (!state.flashlight) state.message = "침대 아래에서 뭔가 움직였다. 불빛 없이는 손을 넣을 수 없다.";
-    else if (!state.photoSeen) state.message = "침대 아래에서 누군가 속삭인다. ‘사진을 봐.’ 지금은 손을 넣을 수 없다.";
-    else if (!state.key) { state.key = true; state.ghost = true; state.message = "사진 속 아이가 가리킨 자리에서 현관 열쇠를 찾았다. 바로 뒤에서 숨소리가 들린다."; }
-    else state.message = "침대 밑에는 이제 먼지와 차가운 어둠만 남았다.";
-  }
-  if (target === "photo") {
-    if (!state.flashlight) state.message = "사진 속 얼굴이 어둠에 잠겼다. 누군가가 당신을 보고 있는 것만 같다.";
-    else { state.photoSeen = true; state.message = "사진 속 아이가 네 손가락을 접어 0과 3을 만들고 있다. 사진 아래에는 ‘시계보다 먼저’라고 적혀 있다."; }
-  }
-  if (target === "note") {
-    if (!state.flashlight) state.message = "젖은 메모의 잉크가 번져 있다. 불빛이 필요하다.";
-    else { state.noteSeen = true; state.message = state.clockSeen && state.photoSeen ? "메모: ‘아이의 손짓을 먼저, 멈춘 시간을 나중에.’ 이제 네 자리 암호를 조합할 수 있다." : "메모: ‘아이의 손짓을 먼저, 멈춘 시간을 나중에.’ 아직 무엇을 뜻하는지 알 수 없다."; }
-  }
-  if (target === "fridge") {
-    state.message = "냉장고 안은 텅 비어 있다. 가장 안쪽에서 누군가 문을 두드린다.";
-  }
-  render();
-}
+  addEventListener("keydown", event => {
+    state.keys[event.code] = true;
+    if (["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "Space"].includes(event.code)) event.preventDefault();
+    if (event.code === "KeyE") interact();
+  });
+  addEventListener("keyup", event => { state.keys[event.code] = false; });
+  document.querySelectorAll("[data-key]").forEach(button => {
+    const code = button.dataset.key;
+    button.addEventListener("pointerdown", () => { state.keys[code] = true; if (code === "KeyE") interact(); });
+    button.addEventListener("pointerup", () => { state.keys[code] = false; });
+    button.addEventListener("pointerleave", () => { state.keys[code] = false; });
+  });
+  canvas.addEventListener("click", () => canvas.requestPointerLock?.());
+  addEventListener("mousemove", event => { if (document.pointerLockElement === canvas) state.angle += event.movementX * 0.0028; });
 
-function openDrawer() {
-  if (!state.drawerOpen) {
-    state.drawerOpen = true;
-    state.flashlight = true;
-    state.message = "신발장 서랍에서 작은 손전등을 찾았다. 배터리는 아직 살아 있다.";
-  } else state.message = "서랍은 비어 있다. 손전등은 당신 손안에서 미약하게 떨린다.";
-  render();
-}
-
-function tryDoor() {
-  if (!state.key) { state.message = "문고리가 움직이지 않는다. 어디엔가 열쇠가 있다."; render(); return; }
-  if (!state.clockSeen || !state.photoSeen || !state.noteSeen) { state.message = "열쇠는 맞지만, 전자 잠금장치가 붉게 깜빡인다. 집 안 어딘가에 남은 단서가 있다."; render(); return; }
-  if (!state.codeSolved) { state.keypad = true; state.message = "잠금장치가 켜졌다. 단서의 순서대로 네 자리 암호를 입력해야 한다."; render(); return; }
-  if (!state.flashlight) { state.ending = "lost"; render(); return; }
-  state.ending = "escape";
-  render();
-}
-
-function pressDigit(digit) {
-  if (!state.keypad || state.entered.length >= 4) return;
-  state.entered += String(digit);
-  if (state.entered.length === 4) {
-    if (state.entered === "0317") {
-      state.codeSolved = true;
-      state.keypad = false;
-      state.message = "초록 불이 켜졌다. 잠금이 풀렸다. 이제 문을 열 수 있다.";
-    } else {
-      state.strikes += 1;
-      state.entered = "";
-      if (state.strikes >= 2) { state.ending = "lost"; render(); return; }
-      state.message = "붉은 불이 두 번 깜빡였다. 복도 끝에서 발소리가 가까워진다. 한 번 더 틀리면 끝이다.";
+  function cellOpen(x, y) { return map[Math.floor(y)]?.[Math.floor(x)] === 0; }
+  function move(distance) {
+    const nx = state.x + Math.cos(state.angle) * distance;
+    const ny = state.y + Math.sin(state.angle) * distance;
+    if (cellOpen(nx, state.y)) state.x = nx;
+    if (cellOpen(state.x, ny)) state.y = ny;
+  }
+  function nearestObject() {
+    return objects.find(object => !object.taken && Math.hypot(state.x - object.x, state.y - object.y) < 0.9);
+  }
+  function interact() {
+    const object = nearestObject();
+    if (!object) { state.notice = "가까이에서 조사할 물건이 없다."; return; }
+    if (object.id === "flashlight") { object.taken = true; state.flashlight = true; state.notice = "손전등을 찾았다. 어둠 속에 메모가 보일 것 같다."; }
+    if (object.id === "note") {
+      if (!state.flashlight) { state.notice = "메모가 어둠에 젖어 있다. 손전등이 필요하다."; return; }
+      object.taken = true; state.code = true; state.notice = "메모에 적힌 비밀번호는 0317. 현관문 잠금장치가 열릴 것이다.";
     }
+    if (object.id === "door") {
+      if (!state.code) { state.notice = "잠겼다. 현관문을 열 비밀번호가 필요하다."; return; }
+      state.escaped = true; state.notice = "문이 열렸다. 비 냄새가 밀려온다.";
+    }
+    updateUi();
   }
-  render();
-}
-
-function clearCode() { state.entered = ""; render(); }
-
-function dismissGhost() {
-  state.ghost = false;
-  state.message = "귀신은 다시 침대 밑으로 사라졌다. 하지만 방 안의 공기가 훨씬 차가워졌다.";
-  render();
-}
-
-function inventory() {
-  const pieces = `${state.photoSeen ? "03" : "??"} / ${state.clockSeen ? "17" : "??"}`;
-  return `<div class="inventory"><span>소지품</span><b class="${state.flashlight ? "found" : ""}">🔦 ${state.flashlight ? "손전등" : "???"}</b><b class="${state.key ? "found" : ""}">🗝 ${state.key ? "현관 열쇠" : "???"}</b><b class="${state.codeSolved ? "found" : ""}"># ${state.codeSolved ? "암호 해제" : `단서 ${pieces}`}</b></div>`;
-}
-
-function objectiveBoard() {
-  const cluesReady = state.clockSeen && state.photoSeen && state.noteSeen;
-  const steps = [
-    [state.flashlight, "빛을 찾아라"],
-    [cluesReady, "흩어진 기억을 모아라"],
-    [state.key, "가장 가까운 곳을 찾아라"],
-    [state.codeSolved, "잠금을 해제하라"],
-  ];
-  const done = steps.filter(([complete]) => complete).length;
-  return `<aside class="objective"><div><span>탈출 진행</span><strong>${done}<i>/ 4</i></strong></div><ol>${steps.map(([complete, label], index) => `<li class="${complete ? "done" : ""}"><b>0${index + 1}</b>${label}</li>`).join("")}</ol></aside>`;
-}
-
-function roomActions() {
-  if (state.room === "hall") {
-    const pad = state.keypad ? `<div class="keypad"><p>암호 <strong>${state.entered.padEnd(4, "·")}</strong></p><div>${[1,2,3,4,5,6,7,8,9,0].map(d => `<button onclick="pressDigit(${d})">${d}</button>`).join("")}<button class="clear" onclick="clearCode()">지움</button></div><small>실패: ${state.strikes} / 2</small></div>` : "";
-    return `<button onclick="openDrawer()">신발장 서랍 열기</button><button class="danger" onclick="tryDoor()">현관문 열기</button>${pad}`;
+  function updateUi() {
+    document.querySelector("#mission-1").classList.toggle("done", state.flashlight);
+    document.querySelector("#mission-2").classList.toggle("done", state.code);
+    document.querySelector("#mission-3").classList.toggle("done", state.escaped);
+    document.querySelector("#notice").textContent = state.notice;
   }
-  if (state.room === "study") return `<button onclick="inspect('clock')">멈춘 시계 조사</button><button onclick="inspect('books')">책장 살펴보기</button>`;
-  if (state.room === "bedroom") return `<button onclick="inspect('bed')">침대 아래 보기</button><button onclick="inspect('photo')">가족사진 보기</button>`;
-  return `<button onclick="inspect('note')">젖은 메모 읽기</button><button onclick="inspect('fridge')">냉장고 열기</button>`;
-}
-
-function render() {
-  if (state.ending) {
-    const escaped = state.ending === "escape";
-    app.innerHTML = `<section class="ending ${escaped ? "escaped" : "lost"}"><p class="eyebrow">${escaped ? "ESCAPE COMPLETE" : "THE HOUSE REMEMBERS"}</p><div class="ending-icon">${escaped ? "☾" : "◉"}</div><h1>${escaped ? "새벽 공기" : "불이 꺼졌다"}</h1><p>${escaped ? "잠금이 풀리고 차가운 비 냄새가 밀려온다. 뒤돌아보지 않은 채, 당신은 집을 빠져나왔다." : "문은 열렸지만 손전등이 없다. 어둠 속에서 누군가 당신의 이름을 불렀다."}</p><button onclick="reset()">다시 깨어나기</button></section>`;
-    return;
+  function cast(angle) {
+    const dirX = Math.cos(angle), dirY = Math.sin(angle);
+    let mapX = Math.floor(state.x), mapY = Math.floor(state.y);
+    const deltaX = Math.abs(1 / (dirX || 0.00001)), deltaY = Math.abs(1 / (dirY || 0.00001));
+    let stepX, stepY, sideX, sideY;
+    if (dirX < 0) { stepX = -1; sideX = (state.x - mapX) * deltaX; } else { stepX = 1; sideX = (mapX + 1 - state.x) * deltaX; }
+    if (dirY < 0) { stepY = -1; sideY = (state.y - mapY) * deltaY; } else { stepY = 1; sideY = (mapY + 1 - state.y) * deltaY; }
+    let side = 0;
+    while (map[mapY]?.[mapX] !== 1) { if (sideX < sideY) { sideX += deltaX; mapX += stepX; side = 0; } else { sideY += deltaY; mapY += stepY; side = 1; } }
+    const distance = side === 0 ? sideX - deltaX : sideY - deltaY;
+    return { distance, side };
   }
-  const room = rooms[state.room];
-  app.innerHTML = `<div class="game ${state.flashlight ? "lit" : ""}">
-    <header><a href="index.html" class="logo">새벽 3시의 집</a><span class="warning">⚠ 돌아보지 마세요 · 소리 켜기 권장</span></header>
-    ${inventory()}
-    <section class="scene ${room.art}"><div class="moon"></div><p class="haunting">DON'T TURN AROUND</p><div class="room-label">${room.name}</div><div class="shadow"></div></section>
-    <section class="panel"><div class="story-side"><p class="chapter">DAY 1 · 03:17 AM</p><h1>${room.name}</h1><p class="story">${state.message}</p><div class="actions">${roomActions()}</div></div>${objectiveBoard()}</section>
-    <nav aria-label="방 이동"><button class="${state.room === "hall" ? "active" : ""}" onclick="go('hall')">현관</button><button class="${state.room === "study" ? "active" : ""}" onclick="go('study')">서재</button><button class="${state.room === "bedroom" ? "active" : ""}" onclick="go('bedroom')">침실</button><button class="${state.room === "kitchen" ? "active" : ""}" onclick="go('kitchen')">부엌</button></nav>
-    ${state.ghost ? `<button class="ghost-jumpscare" onclick="dismissGhost()" aria-label="공포 장면 닫기"><span class="ghost-image"></span><strong>찾았다.</strong><small>화면을 눌러 도망치기</small></button>` : ""}
-  </div>`;
+  function visible(object) {
+    const dx = object.x - state.x, dy = object.y - state.y;
+    const dist = Math.hypot(dx, dy);
+    let diff = Math.atan2(dy, dx) - state.angle;
+    diff = Math.atan2(Math.sin(diff), Math.cos(diff));
+    return { dist, diff, show: Math.abs(diff) < Math.PI / 3 && cast(state.angle + diff).distance + .18 >= dist };
+  }
+  function drawSprite(object, width, height) {
+    if (object.taken) return;
+    const sight = visible(object); if (!sight.show) return;
+    const screenX = width / 2 + (sight.diff / (Math.PI / 3)) * width / 2;
+    const size = Math.min(height * .67, height / sight.dist * .72);
+    const bottom = height / 2 + size / 2;
+    ctx.save();
+    ctx.globalAlpha = Math.max(.36, 1 - sight.dist / 13);
+    ctx.shadowBlur = 25; ctx.shadowColor = object.color; ctx.fillStyle = object.color;
+    if (object.id === "door") { ctx.fillRect(screenX - size * .36, bottom - size, size * .72, size); ctx.fillStyle = "#e8bd6c"; ctx.fillRect(screenX + size * .18, bottom - size * .49, size * .06, size * .06); }
+    else if (object.id === "flashlight") { ctx.fillRect(screenX - size * .12, bottom - size * .2, size * .24, size * .45); ctx.fillStyle = "#fff4b3"; ctx.fillRect(screenX - size * .18, bottom - size * .31, size * .36, size * .14); }
+    else { ctx.fillStyle = "#dfd5bd"; ctx.fillRect(screenX - size * .28, bottom - size * .66, size * .56, size * .72); ctx.fillStyle = "#8b3030"; ctx.fillRect(screenX - size * .18, bottom - size * .48, size * .36, size * .045); }
+    ctx.restore();
+  }
+  function render(time) {
+    const elapsed = Math.min(.05, (time - state.lastTime) / 1000 || 0); state.lastTime = time;
+    const turn = (state.keys.ArrowLeft || state.keys.KeyA ? -1 : 0) + (state.keys.ArrowRight || state.keys.KeyD ? 1 : 0);
+    state.angle += turn * elapsed * 2.1;
+    const walk = (state.keys.KeyW || state.keys.ArrowUp ? 1 : 0) + (state.keys.KeyS || state.keys.ArrowDown ? -1 : 0);
+    if (walk) move(walk * elapsed * 2.25);
+    const width = canvas.clientWidth, height = canvas.clientHeight;
+    ctx.clearRect(0, 0, width, height);
+    const sky = ctx.createLinearGradient(0, 0, 0, height / 2); sky.addColorStop(0, "#050609"); sky.addColorStop(1, "#262831"); ctx.fillStyle = sky; ctx.fillRect(0, 0, width, height / 2);
+    const floor = ctx.createLinearGradient(0, height / 2, 0, height); floor.addColorStop(0, "#211b1c"); floor.addColorStop(1, "#050506"); ctx.fillStyle = floor; ctx.fillRect(0, height / 2, width, height / 2);
+    const fov = Math.PI / 3; const rays = Math.ceil(width / 2);
+    for (let ray = 0; ray < rays; ray += 1) {
+      const angle = state.angle - fov / 2 + ray / rays * fov;
+      const hit = cast(angle); const corrected = hit.distance * Math.cos(angle - state.angle);
+      const wallHeight = Math.min(height * 1.8, height / corrected); const shade = Math.max(8, 48 - corrected * 8 - hit.side * 11);
+      ctx.fillStyle = `rgb(${shade + 18}, ${shade + 11}, ${shade + 14})`;
+      ctx.fillRect(ray * 2, height / 2 - wallHeight / 2, 2.3, wallHeight);
+    }
+    [...objects].sort((a, b) => Math.hypot(b.x-state.x,b.y-state.y)-Math.hypot(a.x-state.x,a.y-state.y)).forEach(item => drawSprite(item, width, height));
+    if (state.flashlight) { const glow = ctx.createRadialGradient(width/2, height/2, 10, width/2, height/2, Math.max(width,height)*.72); glow.addColorStop(0, "#fff5cf1e"); glow.addColorStop(.36, "#f1db9d08"); glow.addColorStop(1, "#000000bb"); ctx.fillStyle=glow; ctx.fillRect(0,0,width,height); }
+    const object = nearestObject(); prompt.textContent = object ? `[ E ] ${object.label} 조사하기` : "";
+    if (state.escaped) { ctx.fillStyle = "#000b"; ctx.fillRect(0,0,width,height); ctx.fillStyle="#f1ead6"; ctx.textAlign="center"; ctx.font="800 38px serif"; ctx.fillText("탈출 성공", width/2, height/2); ctx.font="16px sans-serif"; ctx.fillText("새벽이 밝아오기 전에 집을 빠져나왔다.", width/2, height/2+38); }
+    requestAnimationFrame(render);
+  }
+  updateUi(); requestAnimationFrame(render);
 }
 
-window.go = go;
-window.inspect = inspect;
-window.openDrawer = openDrawer;
-window.tryDoor = tryDoor;
-window.pressDigit = pressDigit;
-window.clearCode = clearCode;
-window.dismissGhost = dismissGhost;
-window.reset = reset;
-render();
+setup();
