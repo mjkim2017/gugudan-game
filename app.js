@@ -41,6 +41,8 @@ function setup() {
     </section>`;
   const canvas = document.querySelector("#game");
   const ctx = canvas.getContext("2d");
+  const wallTexture = new Image();
+  wallTexture.src = "assets/haunted-wall.png";
   const prompt = document.querySelector("#prompt");
 
   function resize() {
@@ -149,6 +151,7 @@ function setup() {
       const wallHeight = Math.min(height * 1.8, height / corrected); const shade = Math.max(8, 48 - corrected * 8 - hit.side * 11);
       ctx.fillStyle = `rgb(${shade + 18}, ${shade + 11}, ${shade + 14})`;
       ctx.fillRect(ray * 2, horizon - wallHeight / 2, 2.3, wallHeight);
+      if (wallTexture.complete && wallTexture.naturalWidth) { ctx.globalAlpha = Math.max(.2, .68 - corrected * .08); ctx.drawImage(wallTexture, (ray * 7) % wallTexture.naturalWidth, 0, 2, wallTexture.naturalHeight, ray * 2, horizon - wallHeight / 2, 2.3, wallHeight); ctx.globalAlpha = 1; }
       if (Math.sin(ray * 1.71 + hit.distance * 11) > .985) { ctx.fillStyle = "#5f1b1d"; ctx.fillRect(ray * 2, horizon - wallHeight * .16, 2.3, wallHeight * .38); }
     }
     [...objects, ...decor].sort((a, b) => Math.hypot(b.x-state.x,b.y-state.y)-Math.hypot(a.x-state.x,a.y-state.y)).forEach(item => drawSprite(item, width, height));
