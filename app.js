@@ -148,7 +148,7 @@ function render() {
     <section class="scene ${room.art}"><div class="moon"></div><p class="haunting">DON'T TURN AROUND</p><div class="room-label">${room.name}</div><div class="shadow"></div></section>
     <section class="panel"><div class="story-side"><p class="chapter">DAY 1 · 03:17 AM</p><h1>${room.name}</h1><p class="story">${state.message}</p><div class="actions">${roomActions()}</div></div>${objectiveBoard()}</section>
     <nav aria-label="방 이동"><button class="${state.room === "hall" ? "active" : ""}" onclick="go('hall')">현관</button><button class="${state.room === "study" ? "active" : ""}" onclick="go('study')">서재</button><button class="${state.room === "bedroom" ? "active" : ""}" onclick="go('bedroom')">침실</button><button class="${state.room === "kitchen" ? "active" : ""}" onclick="go('kitchen')">부엌</button></nav>
-    ${state.ghost ? `<button class="ghost-jumpscare" onclick="dismissGhost()" aria-label="공포 장면 닫기"><span class="ghost-face"><i></i><i></i><b></b></span><strong>찾았다.</strong><small>화면을 눌러 도망치기</small></button>` : ""}
+    ${state.ghost ? `<button class="ghost-jumpscare" onclick="dismissGhost()" aria-label="공포 장면 닫기"><span class="ghost-image"></span><strong>찾았다.</strong><small>화면을 눌러 도망치기</small></button>` : ""}
   </div>`;
 }
 
