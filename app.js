@@ -106,6 +106,18 @@ function inventory() {
   return `<div class="inventory"><span>소지품</span><b class="${state.flashlight ? "found" : ""}">🔦 ${state.flashlight ? "손전등" : "???"}</b><b class="${state.key ? "found" : ""}">🗝 ${state.key ? "현관 열쇠" : "???"}</b><b class="${state.codeSolved ? "found" : ""}"># ${state.codeSolved ? "암호 해제" : `단서 ${pieces}`}</b></div>`;
 }
 
+function objectiveBoard() {
+  const cluesReady = state.clockSeen && state.photoSeen && state.noteSeen;
+  const steps = [
+    [state.flashlight, "빛을 찾아라"],
+    [cluesReady, "흩어진 기억을 모아라"],
+    [state.key, "가장 가까운 곳을 찾아라"],
+    [state.codeSolved, "잠금을 해제하라"],
+  ];
+  const done = steps.filter(([complete]) => complete).length;
+  return `<aside class="objective"><div><span>탈출 진행</span><strong>${done}<i>/ 4</i></strong></div><ol>${steps.map(([complete, label], index) => `<li class="${complete ? "done" : ""}"><b>0${index + 1}</b>${label}</li>`).join("")}</ol></aside>`;
+}
+
 function roomActions() {
   if (state.room === "hall") {
     const pad = state.keypad ? `<div class="keypad"><p>암호 <strong>${state.entered.padEnd(4, "·")}</strong></p><div>${[1,2,3,4,5,6,7,8,9,0].map(d => `<button onclick="pressDigit(${d})">${d}</button>`).join("")}<button class="clear" onclick="clearCode()">지움</button></div><small>실패: ${state.strikes} / 2</small></div>` : "";
@@ -124,10 +136,10 @@ function render() {
   }
   const room = rooms[state.room];
   app.innerHTML = `<div class="game ${state.flashlight ? "lit" : ""}">
-    <header><a href="index.html" class="logo">새벽 3시의 집</a><span>공포 탈출 · 소리 켜기 권장</span></header>
+    <header><a href="index.html" class="logo">새벽 3시의 집</a><span class="warning">⚠ 돌아보지 마세요 · 소리 켜기 권장</span></header>
     ${inventory()}
-    <section class="scene ${room.art}"><div class="moon"></div><div class="room-label">${room.name}</div><div class="shadow"></div></section>
-    <section class="panel"><p class="chapter">DAY 1 · 03:17 AM</p><h1>${room.name}</h1><p class="story">${state.message}</p><div class="actions">${roomActions()}</div></section>
+    <section class="scene ${room.art}"><div class="moon"></div><p class="haunting">DON'T TURN AROUND</p><div class="room-label">${room.name}</div><div class="shadow"></div></section>
+    <section class="panel"><div class="story-side"><p class="chapter">DAY 1 · 03:17 AM</p><h1>${room.name}</h1><p class="story">${state.message}</p><div class="actions">${roomActions()}</div></div>${objectiveBoard()}</section>
     <nav aria-label="방 이동"><button class="${state.room === "hall" ? "active" : ""}" onclick="go('hall')">현관</button><button class="${state.room === "study" ? "active" : ""}" onclick="go('study')">서재</button><button class="${state.room === "bedroom" ? "active" : ""}" onclick="go('bedroom')">침실</button><button class="${state.room === "kitchen" ? "active" : ""}" onclick="go('kitchen')">부엌</button></nav>
   </div>`;
 }
