@@ -12,6 +12,7 @@ const state = {
   entered: "",
   strikes: 0,
   ghost: false,
+  ghostEncountered: false,
   drawerOpen: false,
   heardWhisper: false,
   message: "비가 창문을 두드린다. 이 집에서 나가야 한다.",
@@ -26,7 +27,7 @@ const rooms = {
 };
 
 function reset() {
-  Object.assign(state, { room: "hall", flashlight: false, key: false, clockSeen: false, photoSeen: false, noteSeen: false, codeSolved: false, keypad: false, entered: "", strikes: 0, ghost: false, drawerOpen: false, heardWhisper: false, message: "비가 창문을 두드린다. 이 집에서 나가야 한다.", ending: "" });
+  Object.assign(state, { room: "hall", flashlight: false, key: false, clockSeen: false, photoSeen: false, noteSeen: false, codeSolved: false, keypad: false, entered: "", strikes: 0, ghost: false, ghostEncountered: false, drawerOpen: false, heardWhisper: false, message: "비가 창문을 두드린다. 이 집에서 나가야 한다.", ending: "" });
   render();
 }
 
@@ -45,7 +46,8 @@ function inspect(target) {
     state.message = state.flashlight ? "책 사이에 오래된 영수증이 있다. ‘열쇠는 가장 가까운 곳에. 하지만 사진을 먼저 보지 말 것.’" : "너무 어두워서 책등의 글자가 보이지 않는다.";
   }
   if (target === "bed") {
-    if (!state.flashlight) state.message = "침대 아래에서 뭔가 움직였다. 불빛 없이는 손을 넣을 수 없다.";
+    if (!state.ghostEncountered) { state.ghostEncountered = true; state.ghost = true; state.message = "침대 밑에서 얼굴이 튀어나왔다. 방금 당신을 본 것 같다."; }
+    else if (!state.flashlight) state.message = "침대 아래에서 뭔가 움직였다. 불빛 없이는 손을 넣을 수 없다.";
     else if (!state.photoSeen) state.message = "침대 아래에서 누군가 속삭인다. ‘사진을 봐.’ 지금은 손을 넣을 수 없다.";
     else if (!state.key) { state.key = true; state.ghost = true; state.message = "사진 속 아이가 가리킨 자리에서 현관 열쇠를 찾았다. 바로 뒤에서 숨소리가 들린다."; }
     else state.message = "침대 밑에는 이제 먼지와 차가운 어둠만 남았다.";
