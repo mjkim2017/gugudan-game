@@ -4,7 +4,13 @@ const state = {
   room: "hall",
   flashlight: false,
   key: false,
-  code: false,
+  clockSeen: false,
+  photoSeen: false,
+  noteSeen: false,
+  codeSolved: false,
+  keypad: false,
+  entered: "",
+  strikes: 0,
   drawerOpen: false,
   heardWhisper: false,
   message: "비가 창문을 두드린다. 이 집에서 나가야 한다.",
@@ -19,7 +25,7 @@ const rooms = {
 };
 
 function reset() {
-  Object.assign(state, { room: "hall", flashlight: false, key: false, code: false, drawerOpen: false, heardWhisper: false, message: "비가 창문을 두드린다. 이 집에서 나가야 한다.", ending: "" });
+  Object.assign(state, { room: "hall", flashlight: false, key: false, clockSeen: false, photoSeen: false, noteSeen: false, codeSolved: false, keypad: false, entered: "", strikes: 0, drawerOpen: false, heardWhisper: false, message: "비가 창문을 두드린다. 이 집에서 나가야 한다.", ending: "" });
   render();
 }
 
@@ -31,22 +37,25 @@ function go(room) {
 
 function inspect(target) {
   if (target === "clock") {
-    state.code = true;
-    state.message = "시계 뒷면에 긁힌 숫자: 0317. 이 숫자를 기억해야 할 것 같다.";
+    if (!state.flashlight) state.message = "유리 너머가 너무 어둡다. 시곗바늘조차 보이지 않는다.";
+    else { state.clockSeen = true; state.message = "손전등 불빛 아래 시곗바늘이 보인다. 시계는 3시 17분에서 멎어 있다. ‘17’이라는 숫자가 유난히 선명하다."; }
   }
   if (target === "books") {
-    state.message = state.flashlight ? "책 사이에 오래된 영수증이 있다. ‘열쇠는 가장 가까운 곳에.’" : "너무 어두워서 책등의 글자가 보이지 않는다.";
+    state.message = state.flashlight ? "책 사이에 오래된 영수증이 있다. ‘열쇠는 가장 가까운 곳에. 하지만 사진을 먼저 보지 말 것.’" : "너무 어두워서 책등의 글자가 보이지 않는다.";
   }
   if (target === "bed") {
     if (!state.flashlight) state.message = "침대 아래에서 뭔가 움직였다. 불빛 없이는 손을 넣을 수 없다.";
-    else if (!state.key) { state.key = true; state.message = "손전등 빛 아래, 침대 밑에서 현관 열쇠를 찾았다. 바로 뒤에서 숨소리가 들린다."; }
+    else if (!state.photoSeen) state.message = "침대 아래에서 누군가 속삭인다. ‘사진을 봐.’ 지금은 손을 넣을 수 없다.";
+    else if (!state.key) { state.key = true; state.message = "사진 속 아이가 가리킨 자리에서 현관 열쇠를 찾았다. 바로 뒤에서 숨소리가 들린다."; }
     else state.message = "침대 밑에는 이제 먼지와 차가운 어둠만 남았다.";
   }
   if (target === "photo") {
-    state.message = "사진 속 가족은 모두 카메라를 보고 있다. 단 한 명만, 당신을 보고 있다.";
+    if (!state.flashlight) state.message = "사진 속 얼굴이 어둠에 잠겼다. 누군가가 당신을 보고 있는 것만 같다.";
+    else { state.photoSeen = true; state.message = "사진 속 아이가 네 손가락을 접어 0과 3을 만들고 있다. 사진 아래에는 ‘시계보다 먼저’라고 적혀 있다."; }
   }
   if (target === "note") {
-    state.message = state.code ? "메모: ‘3시 17분에 문은 열린다. 하지만 빛을 잊지 마.’" : "젖은 메모에는 숫자 네 자리가 있었던 흔적이 난다.";
+    if (!state.flashlight) state.message = "젖은 메모의 잉크가 번져 있다. 불빛이 필요하다.";
+    else { state.noteSeen = true; state.message = state.clockSeen && state.photoSeen ? "메모: ‘아이의 손짓을 먼저, 멈춘 시간을 나중에.’ 이제 네 자리 암호를 조합할 수 있다." : "메모: ‘아이의 손짓을 먼저, 멈춘 시간을 나중에.’ 아직 무엇을 뜻하는지 알 수 없다."; }
   }
   if (target === "fridge") {
     state.message = "냉장고 안은 텅 비어 있다. 가장 안쪽에서 누군가 문을 두드린다.";
@@ -65,18 +74,43 @@ function openDrawer() {
 
 function tryDoor() {
   if (!state.key) { state.message = "문고리가 움직이지 않는다. 어디엔가 열쇠가 있다."; render(); return; }
-  if (!state.code) { state.message = "열쇠는 맞지만, 전자 잠금장치가 붉게 깜빡인다. 네 자리 암호가 필요하다."; render(); return; }
+  if (!state.clockSeen || !state.photoSeen || !state.noteSeen) { state.message = "열쇠는 맞지만, 전자 잠금장치가 붉게 깜빡인다. 집 안 어딘가에 남은 단서가 있다."; render(); return; }
+  if (!state.codeSolved) { state.keypad = true; state.message = "잠금장치가 켜졌다. 단서의 순서대로 네 자리 암호를 입력해야 한다."; render(); return; }
   if (!state.flashlight) { state.ending = "lost"; render(); return; }
   state.ending = "escape";
   render();
 }
 
+function pressDigit(digit) {
+  if (!state.keypad || state.entered.length >= 4) return;
+  state.entered += String(digit);
+  if (state.entered.length === 4) {
+    if (state.entered === "0317") {
+      state.codeSolved = true;
+      state.keypad = false;
+      state.message = "초록 불이 켜졌다. 잠금이 풀렸다. 이제 문을 열 수 있다.";
+    } else {
+      state.strikes += 1;
+      state.entered = "";
+      if (state.strikes >= 2) { state.ending = "lost"; render(); return; }
+      state.message = "붉은 불이 두 번 깜빡였다. 복도 끝에서 발소리가 가까워진다. 한 번 더 틀리면 끝이다.";
+    }
+  }
+  render();
+}
+
+function clearCode() { state.entered = ""; render(); }
+
 function inventory() {
-  return `<div class="inventory"><span>소지품</span><b class="${state.flashlight ? "found" : ""}">🔦 ${state.flashlight ? "손전등" : "???"}</b><b class="${state.key ? "found" : ""}">🗝 ${state.key ? "현관 열쇠" : "???"}</b><b class="${state.code ? "found" : ""}"># ${state.code ? "암호 0317" : "????"}</b></div>`;
+  const pieces = `${state.photoSeen ? "03" : "??"} / ${state.clockSeen ? "17" : "??"}`;
+  return `<div class="inventory"><span>소지품</span><b class="${state.flashlight ? "found" : ""}">🔦 ${state.flashlight ? "손전등" : "???"}</b><b class="${state.key ? "found" : ""}">🗝 ${state.key ? "현관 열쇠" : "???"}</b><b class="${state.codeSolved ? "found" : ""}"># ${state.codeSolved ? "암호 해제" : `단서 ${pieces}`}</b></div>`;
 }
 
 function roomActions() {
-  if (state.room === "hall") return `<button onclick="openDrawer()">신발장 서랍 열기</button><button class="danger" onclick="tryDoor()">현관문 열기</button>`;
+  if (state.room === "hall") {
+    const pad = state.keypad ? `<div class="keypad"><p>암호 <strong>${state.entered.padEnd(4, "·")}</strong></p><div>${[1,2,3,4,5,6,7,8,9,0].map(d => `<button onclick="pressDigit(${d})">${d}</button>`).join("")}<button class="clear" onclick="clearCode()">지움</button></div><small>실패: ${state.strikes} / 2</small></div>` : "";
+    return `<button onclick="openDrawer()">신발장 서랍 열기</button><button class="danger" onclick="tryDoor()">현관문 열기</button>${pad}`;
+  }
   if (state.room === "study") return `<button onclick="inspect('clock')">멈춘 시계 조사</button><button onclick="inspect('books')">책장 살펴보기</button>`;
   if (state.room === "bedroom") return `<button onclick="inspect('bed')">침대 아래 보기</button><button onclick="inspect('photo')">가족사진 보기</button>`;
   return `<button onclick="inspect('note')">젖은 메모 읽기</button><button onclick="inspect('fridge')">냉장고 열기</button>`;
@@ -102,5 +136,7 @@ window.go = go;
 window.inspect = inspect;
 window.openDrawer = openDrawer;
 window.tryDoor = tryDoor;
+window.pressDigit = pressDigit;
+window.clearCode = clearCode;
 window.reset = reset;
 render();
