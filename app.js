@@ -11,6 +11,7 @@ const state = {
   keypad: false,
   entered: "",
   strikes: 0,
+  ghost: false,
   drawerOpen: false,
   heardWhisper: false,
   message: "비가 창문을 두드린다. 이 집에서 나가야 한다.",
@@ -25,7 +26,7 @@ const rooms = {
 };
 
 function reset() {
-  Object.assign(state, { room: "hall", flashlight: false, key: false, clockSeen: false, photoSeen: false, noteSeen: false, codeSolved: false, keypad: false, entered: "", strikes: 0, drawerOpen: false, heardWhisper: false, message: "비가 창문을 두드린다. 이 집에서 나가야 한다.", ending: "" });
+  Object.assign(state, { room: "hall", flashlight: false, key: false, clockSeen: false, photoSeen: false, noteSeen: false, codeSolved: false, keypad: false, entered: "", strikes: 0, ghost: false, drawerOpen: false, heardWhisper: false, message: "비가 창문을 두드린다. 이 집에서 나가야 한다.", ending: "" });
   render();
 }
 
@@ -46,7 +47,7 @@ function inspect(target) {
   if (target === "bed") {
     if (!state.flashlight) state.message = "침대 아래에서 뭔가 움직였다. 불빛 없이는 손을 넣을 수 없다.";
     else if (!state.photoSeen) state.message = "침대 아래에서 누군가 속삭인다. ‘사진을 봐.’ 지금은 손을 넣을 수 없다.";
-    else if (!state.key) { state.key = true; state.message = "사진 속 아이가 가리킨 자리에서 현관 열쇠를 찾았다. 바로 뒤에서 숨소리가 들린다."; }
+    else if (!state.key) { state.key = true; state.ghost = true; state.message = "사진 속 아이가 가리킨 자리에서 현관 열쇠를 찾았다. 바로 뒤에서 숨소리가 들린다."; }
     else state.message = "침대 밑에는 이제 먼지와 차가운 어둠만 남았다.";
   }
   if (target === "photo") {
@@ -101,6 +102,12 @@ function pressDigit(digit) {
 
 function clearCode() { state.entered = ""; render(); }
 
+function dismissGhost() {
+  state.ghost = false;
+  state.message = "귀신은 다시 침대 밑으로 사라졌다. 하지만 방 안의 공기가 훨씬 차가워졌다.";
+  render();
+}
+
 function inventory() {
   const pieces = `${state.photoSeen ? "03" : "??"} / ${state.clockSeen ? "17" : "??"}`;
   return `<div class="inventory"><span>소지품</span><b class="${state.flashlight ? "found" : ""}">🔦 ${state.flashlight ? "손전등" : "???"}</b><b class="${state.key ? "found" : ""}">🗝 ${state.key ? "현관 열쇠" : "???"}</b><b class="${state.codeSolved ? "found" : ""}"># ${state.codeSolved ? "암호 해제" : `단서 ${pieces}`}</b></div>`;
@@ -141,6 +148,7 @@ function render() {
     <section class="scene ${room.art}"><div class="moon"></div><p class="haunting">DON'T TURN AROUND</p><div class="room-label">${room.name}</div><div class="shadow"></div></section>
     <section class="panel"><div class="story-side"><p class="chapter">DAY 1 · 03:17 AM</p><h1>${room.name}</h1><p class="story">${state.message}</p><div class="actions">${roomActions()}</div></div>${objectiveBoard()}</section>
     <nav aria-label="방 이동"><button class="${state.room === "hall" ? "active" : ""}" onclick="go('hall')">현관</button><button class="${state.room === "study" ? "active" : ""}" onclick="go('study')">서재</button><button class="${state.room === "bedroom" ? "active" : ""}" onclick="go('bedroom')">침실</button><button class="${state.room === "kitchen" ? "active" : ""}" onclick="go('kitchen')">부엌</button></nav>
+    ${state.ghost ? `<button class="ghost-jumpscare" onclick="dismissGhost()" aria-label="공포 장면 닫기"><span class="ghost-face"><i></i><i></i><b></b></span><strong>찾았다.</strong><small>화면을 눌러 도망치기</small></button>` : ""}
   </div>`;
 }
 
@@ -150,5 +158,6 @@ window.openDrawer = openDrawer;
 window.tryDoor = tryDoor;
 window.pressDigit = pressDigit;
 window.clearCode = clearCode;
+window.dismissGhost = dismissGhost;
 window.reset = reset;
 render();
