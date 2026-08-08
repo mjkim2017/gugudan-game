@@ -39,10 +39,11 @@ function updateScore() {
   const metrics = document.querySelector("#metrics");
   const disclaimer = document.querySelector("#disclaimer");
   if (data.age < 20) {
-    scoreRing.innerHTML = `<div class="youth-score"><span>GROWING<br />STRONG</span><strong>성장기<br />모드</strong></div>`;
-    scoreCopy.innerHTML = `<p class="eyebrow">GROWTH CHECK</p><h2>${data.name}님, 성장이 먼저예요</h2><p>성장기에는 성인용 체지방률·골격근량 계산식을 사용하지 않아요.</p>`;
+    const growthScore = [data.age, data.height, data.weight].filter(value => Number.isFinite(value) && value > 0).length / 3 * 100;
+    scoreRing.innerHTML = `<div class="score-ring" style="--score:${growthScore}"><div><strong>${growthScore}</strong><span>GROWTH CHECK</span></div></div>`;
+    scoreCopy.innerHTML = `<p class="eyebrow">GROWTH CHECK</p><h2>${data.name}님, 성장이 먼저예요</h2><p>성장 기록 점수는 기본 정보가 완성됐는지 보여주는 점수예요. 건강 상태를 판정하지는 않아요.</p>`;
     metrics.innerHTML = metric("체질량지수", format(bmi), "BMI", "성장기 참고 수치", 55) + metric("체지방률", "추정하지 않음", "", "성인 공식 미사용", 8, "muted") + metric("골격근량", "추정하지 않음", "", "측정 장비 필요", 8, "muted") + metric("건강 확인", "성장 곡선", "", "BMI 백분위 참고", 55);
-    disclaimer.textContent = "어린이·청소년 BMI는 나이와 성별에 따른 성장 곡선 백분위로 확인해야 합니다. 이 화면은 진단을 대신하지 않아요.";
+    disclaimer.textContent = "성장 기록 점수는 입력 상태를 나타내며 의료·건강 점수가 아닙니다. 어린이·청소년 BMI는 나이와 성별에 따른 성장 곡선 백분위로 확인해야 합니다.";
     return;
   }
   const fatRange = data.sex === "male" ? [10, 20] : [18, 28];
