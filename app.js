@@ -28,6 +28,7 @@ function getData() {
 
 function calc(data) {
   const bmi = data.weight / ((data.height / 100) ** 2);
+  if (data.age < 20) return { bmi, isYouth: true };
   const fatRange = data.sex === "male" ? [10, 20] : [18, 28];
   // Population formulae are useful for a trend, but are not a body-composition measurement.
   const bodyFat = clamp(1.2 * bmi + .23 * data.age - (data.sex === "male" ? 16.2 : 5.4), 5, 60);
@@ -42,7 +43,7 @@ function calc(data) {
   const score = Math.round(clamp(bmiScore * .42 + fatScore * .33 + muscleScore * .25, 0, 100));
   const status = score >= 85 ? "아주 좋아요" : score >= 70 ? "균형 잡힌 편이에요" : score >= 55 ? "조금만 더 돌봐요" : "생활 습관을 점검해요";
   const targetWeight = [18.5, 22.9].map(value => value * ((data.height / 100) ** 2));
-  return { bmi, bodyFat, muscle, fatRange, muscleRatio, bmiScore, fatScore, muscleScore, score, status, targetWeight };
+  return { bmi, bodyFat, muscle, fatRange, muscleRatio, bmiScore, fatScore, muscleScore, score, status, targetWeight, isYouth: false };
 }
 
 function bmiLabel(bmi) {
@@ -64,9 +65,28 @@ function metricCard(title, value, unit, label, score, tone) {
   </article>`;
 }
 
+function infoCard(title, value, label) {
+  return `<article class="metric-card info-card"><div class="metric-top"><span>${title}</span><em>성장기</em></div><strong>${value}</strong><p>${label}</p></article>`;
+}
+
 function updateDashboard() {
   const data = getData();
   const result = calc(data);
+  if (result.isYouth) {
+    document.querySelector("#greeting-name").textContent = `${data.name}님`;
+    document.querySelector("#score-block").innerHTML = `<div class="youth-score"><span>GROWING<br>STRONG</span><strong>성장기<br>모드</strong></div>`;
+    document.querySelector("#score-copy").innerHTML = `<p class="eyebrow">GROWTH CHECK</p><h2>숫자보다 성장이 먼저예요</h2><p>성장기에는 성인용 체지방·골격근량 계산식을 사용하지 않아요. 키와 체중 변화는 보호자·전문가와 함께 살펴보세요.</p>`;
+    document.querySelector("#metrics").innerHTML = [
+      metricCard("체질량지수", format(result.bmi), "BMI", "성장기 참고 수치", 55, "good"),
+      infoCard("체지방률", "추정하지 않음", "성장기에는 성인 공식이 맞지 않아요."),
+      infoCard("골격근량", "추정하지 않음", "실제 측정 장비가 필요해요."),
+      infoCard("건강 확인", "성장 곡선", "나이·성별 BMI 백분위로 확인해요."),
+    ].join("");
+    document.querySelector("#tips").innerHTML = `<li><span class="tip-icon meal">✦</span><div><strong>골고루 한 끼</strong><p>식사는 거르지 말고 다양한 음식을 먹어요.</p></div></li><li><span class="tip-icon walk">↗</span><div><strong>즐겁게 움직이기</strong><p>좋아하는 놀이와 운동으로 매일 몸을 움직여요.</p></div></li><li><span class="tip-icon sleep">☾</span><div><strong>충분한 잠</strong><p>성장과 회복을 위해 규칙적으로 쉬어요.</p></div></li>`;
+    document.querySelector(".disclaimer").textContent = "성장기에는 체지방률·골격근량을 이 앱에서 추정하지 않습니다. 어린이·청소년 BMI는 나이와 성별에 따른 성장 곡선 백분위로 의료진 또는 보호자와 함께 확인하세요.";
+    document.querySelector("#updated-time").textContent = new Intl.DateTimeFormat("ko-KR", { month: "long", day: "numeric", weekday: "short" }).format(new Date());
+    return;
+  }
   document.querySelector("#greeting-name").textContent = `${data.name}님`;
   document.querySelector("#score-block").innerHTML = ring(result.score);
   document.querySelector("#score-copy").innerHTML = `<p class="eyebrow">오늘의 밸런스</p><h2>${result.status}</h2><p>현재 기록을 바탕으로 계산한 건강 균형 점수예요. 작은 변화도 꾸준히 기록해 보세요.</p>`;
@@ -108,7 +128,7 @@ function setup() {
             <form id="profile-form">
               <label class="wide">이름<input name="name" type="text" maxlength="12" value="${defaults.name}" /></label>
               <label>성별<select name="sex"><option value="female">여성</option><option value="male">남성</option></select></label>
-              <label>나이<input name="age" type="number" min="14" max="100" value="${defaults.age}" /></label>
+              <label>나이<input name="age" type="number" min="2" max="120" value="${defaults.age}" /></label>
               <label>키 <small>cm</small><input name="height" type="number" min="100" max="230" step=".1" value="${defaults.height}" /></label>
               <label>체중 <small>kg</small><input name="weight" type="number" min="25" max="250" step=".1" value="${defaults.weight}" /></label>
             </form>
