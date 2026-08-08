@@ -1,146 +1,68 @@
 const app = document.querySelector("#app");
-
-const defaults = {
-  name: "나",
-  sex: "female",
-  age: 29,
-  height: 163,
-  weight: 57.4,
-};
-
-const number = (value, fallback = 0) => {
-  const parsed = Number.parseFloat(value);
-  return Number.isFinite(parsed) ? parsed : fallback;
-};
+const page = document.body.dataset.page || "home";
+const defaults = { name: "나", sex: "female", age: 29, height: 163, weight: 57.4 };
 const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
 const format = value => new Intl.NumberFormat("ko-KR", { maximumFractionDigits: 1 }).format(value);
 
-function getData() {
-  const form = new FormData(document.querySelector("#profile-form"));
-  return {
-    name: form.get("name")?.trim() || "나",
-    sex: form.get("sex"),
-    age: number(form.get("age"), defaults.age),
-    height: number(form.get("height"), defaults.height),
-    weight: number(form.get("weight"), defaults.weight),
-  };
+function nav() {
+  const links = [["home", "index.html", "홈"], ["score", "score.html", "건강 점수"], ["recommendations", "recommendations.html", "운동·식단 추천"]];
+  return `<header class="site-header"><a class="brand" href="index.html"><span class="brand-mark"><i></i><i></i><i></i></span><span>balance<span>check</span></span></a><nav>${links.map(([id, href, label]) => `<a class="${page === id ? "active" : ""}" href="${href}">${label}</a>`).join("")}</nav><span class="header-note"><i></i> 매일 한 걸음</span></header>`;
 }
 
-function calc(data) {
+function home() {
+  return `<section class="home-hero"><div><p class="eyebrow">MY DAILY HEALTH COMPANION</p><h1>내 몸을 이해하는<br /><em>작고 건강한</em> 시작.</h1><p class="hero-copy">숫자는 간결하게 확인하고, 오늘 바로 실천할 운동과 식단을 찾아보세요.</p><a class="primary-button" href="score.html">내 건강 점수 확인하기 <b>→</b></a></div><div class="hero-art"><div class="sun-disc"></div><div class="leaf leaf-a">⌁</div><div class="leaf leaf-b">⌁</div><div class="hero-word">BREATHE<br /><span>MOVE</span><br />GROW</div></div></section><section class="page-intro"><p class="eyebrow">THREE SIMPLE STEPS</p><h2>오늘의 몸과 마음을<br />가볍게 돌봐요.</h2></section><section class="journey-grid"><a href="score.html" class="journey-card sage"><span>01</span><div class="card-icon">◌</div><h3>건강 점수</h3><p>키와 체중으로 나의 현재 균형을 확인해요.</p><b>점수 보기 →</b></a><a href="recommendations.html" class="journey-card cream"><span>02</span><div class="card-icon">↗</div><h3>운동 추천</h3><p>지금 할 수 있는 가벼운 움직임부터 시작해요.</p><b>운동 보기 →</b></a><a href="recommendations.html#food" class="journey-card peach"><span>03</span><div class="card-icon">✦</div><h3>식단 추천</h3><p>한 끼를 더 건강하게 만드는 작은 선택이에요.</p><b>식단 보기 →</b></a></section>`;
+}
+
+function score() {
+  return `<section class="page-title"><p class="eyebrow">BODY PROFILE</p><h1>오늘의 건강 점수</h1><p>키, 체중, 나이, 성별을 입력하면 참고용 균형 점수를 계산해요.</p></section><section class="score-layout"><section class="form-card"><div class="section-heading"><h2>내 정보 입력</h2><span>바로 반영돼요</span></div><form id="profile-form"><label class="wide">이름<input name="name" maxlength="12" value="${defaults.name}" /></label><label>성별<select name="sex"><option value="female">여성</option><option value="male">남성</option></select></label><label>나이<input name="age" type="number" min="2" max="120" value="${defaults.age}" /></label><label>키 <small>cm</small><input name="height" type="number" min="60" max="230" step=".1" value="${defaults.height}" /></label><label>체중 <small>kg</small><input name="weight" type="number" min="8" max="250" step=".1" value="${defaults.weight}" /></label></form><p class="input-help">개인 정보는 저장하지 않으며, 이 기기에서만 계산됩니다.</p></section><section class="score-card"><div id="score-ring"></div><div id="score-copy"></div></section></section><section class="metrics-section"><div class="section-heading"><div><p class="eyebrow">YOUR NUMBERS</p><h2>한눈에 보는 수치</h2></div></div><div class="metric-grid" id="metrics"></div><p class="disclaimer" id="disclaimer"></p></section>`;
+}
+
+function recommendations() {
+  return `<section class="page-title"><p class="eyebrow">SMALL STEPS, EVERY DAY</p><h1>운동·식단 추천</h1><p>완벽함보다 꾸준함. 오늘의 에너지를 채우는 쉬운 습관을 골라 보세요.</p></section><section class="recommend-hero"><div><span class="recommend-icon">↗</span><p class="eyebrow">MOVE YOUR BODY</p><h2>오늘은 10분만<br />움직여 볼까요?</h2><p>몸을 가볍게 깨우는 걷기와 스트레칭부터 시작해요.</p><a class="text-link" href="#movement">운동 살펴보기 →</a></div><div class="movement-lines"><i></i><i></i><i></i></div></section><section id="movement" class="recommend-section"><div class="section-heading"><div><p class="eyebrow">EASY MOVEMENT</p><h2>운동 추천</h2></div><span>하나만 골라도 충분해요</span></div><div class="recommend-grid"><article><span class="mini-icon walk">↗</span><b>산책</b><strong>10분</strong><p>식사 후 가볍게 걸으며 몸을 깨워요.</p></article><article><span class="mini-icon stretch">⌇</span><b>전신 스트레칭</b><strong>5분</strong><p>목, 어깨, 다리를 천천히 늘려 주세요.</p></article><article><span class="mini-icon strength">◆</span><b>의자 스쿼트</b><strong>8회 × 2</strong><p>무리하지 않는 범위에서 천천히 해요.</p></article></div></section><section id="food" class="food-section"><div class="section-heading"><div><p class="eyebrow">ONE BETTER PLATE</p><h2>식단 추천</h2></div><span>오늘 한 끼부터</span></div><div class="food-grid"><article><span>01</span><h3>채소를 반 접시</h3><p>색이 다른 채소를 곁들이면 한 끼가 더 든든해져요.</p></article><article><span>02</span><h3>단백질 먼저</h3><p>달걀, 두부, 생선, 콩처럼 익숙한 단백질을 챙겨요.</p></article><article><span>03</span><h3>물 한 컵</h3><p>달콤한 음료 대신 식사 전후 물을 마셔 보세요.</p></article></div><p class="disclaimer">개인 알레르기, 질환, 성장 상태에 따라 필요한 식단과 운동은 달라질 수 있어요. 불편함이 있으면 보호자 또는 전문가와 상담하세요.</p></section>`;
+}
+
+function getData() {
+  const form = new FormData(document.querySelector("#profile-form"));
+  const value = (key, fallback) => Number.parseFloat(form.get(key)) || fallback;
+  return { name: form.get("name")?.trim() || "나", sex: form.get("sex"), age: value("age", defaults.age), height: value("height", defaults.height), weight: value("weight", defaults.weight) };
+}
+
+function metric(title, value, unit, label, level, type = "good") {
+  return `<article class="metric-card ${type}"><div><span>${title}</span><em>${label}</em></div><strong>${value}<small>${unit}</small></strong><i class="meter"><b style="width:${clamp(level, 8, 100)}%"></b></i></article>`;
+}
+
+function updateScore() {
+  const data = getData();
   const bmi = data.weight / ((data.height / 100) ** 2);
-  if (data.age < 20) return { bmi, isYouth: true };
+  const scoreRing = document.querySelector("#score-ring");
+  const scoreCopy = document.querySelector("#score-copy");
+  const metrics = document.querySelector("#metrics");
+  const disclaimer = document.querySelector("#disclaimer");
+  if (data.age < 20) {
+    scoreRing.innerHTML = `<div class="youth-score"><span>GROWING<br />STRONG</span><strong>성장기<br />모드</strong></div>`;
+    scoreCopy.innerHTML = `<p class="eyebrow">GROWTH CHECK</p><h2>${data.name}님, 성장이 먼저예요</h2><p>성장기에는 성인용 체지방률·골격근량 계산식을 사용하지 않아요.</p>`;
+    metrics.innerHTML = metric("체질량지수", format(bmi), "BMI", "성장기 참고 수치", 55) + metric("체지방률", "추정하지 않음", "", "성인 공식 미사용", 8, "muted") + metric("골격근량", "추정하지 않음", "", "측정 장비 필요", 8, "muted") + metric("건강 확인", "성장 곡선", "", "BMI 백분위 참고", 55);
+    disclaimer.textContent = "어린이·청소년 BMI는 나이와 성별에 따른 성장 곡선 백분위로 확인해야 합니다. 이 화면은 진단을 대신하지 않아요.";
+    return;
+  }
   const fatRange = data.sex === "male" ? [10, 20] : [18, 28];
-  // Population formulae are useful for a trend, but are not a body-composition measurement.
   const bodyFat = clamp(1.2 * bmi + .23 * data.age - (data.sex === "male" ? 16.2 : 5.4), 5, 60);
-  const fatFreeMass = data.sex === "male"
-    ? 9270 * data.weight / (6680 + 216 * bmi)
-    : 9270 * data.weight / (8780 + 244 * bmi);
+  const fatFreeMass = data.sex === "male" ? 9270 * data.weight / (6680 + 216 * bmi) : 9270 * data.weight / (8780 + 244 * bmi);
   const muscle = fatFreeMass * (data.sex === "male" ? .58 : .56);
   const muscleRatio = muscle / data.weight * 100;
   const bmiScore = 100 - Math.min(40, Math.abs(bmi - 22) * 8);
-  const fatScore = 100 - Math.min(45, Math.max(0, bodyFat - fatRange[1]) * 3) - Math.min(25, Math.max(0, fatRange[0] - bodyFat) * 3);
+  const fatScore = 100 - Math.min(45, Math.max(0, bodyFat - fatRange[1]) * 3);
   const muscleScore = clamp(58 + (muscleRatio - 30) * 2.4, 30, 100);
   const score = Math.round(clamp(bmiScore * .42 + fatScore * .33 + muscleScore * .25, 0, 100));
-  const status = score >= 85 ? "아주 좋아요" : score >= 70 ? "균형 잡힌 편이에요" : score >= 55 ? "조금만 더 돌봐요" : "생활 습관을 점검해요";
-  const targetWeight = [18.5, 22.9].map(value => value * ((data.height / 100) ** 2));
-  return { bmi, bodyFat, muscle, fatRange, muscleRatio, bmiScore, fatScore, muscleScore, score, status, targetWeight, isYouth: false };
-}
-
-function bmiLabel(bmi) {
-  if (bmi < 18.5) return "저체중";
-  if (bmi < 23) return "정상";
-  if (bmi < 25) return "과체중";
-  return "비만 범위";
-}
-
-function ring(score) {
-  return `<div class="score-ring" style="--score:${score}"><div><strong>${score}</strong><span>HEALTH SCORE</span></div></div>`;
-}
-
-function metricCard(title, value, unit, label, score, tone) {
-  return `<article class="metric-card ${tone}">
-    <div class="metric-top"><span>${title}</span><em>${label}</em></div>
-    <strong>${value}<small>${unit}</small></strong>
-    <div class="meter"><i style="width:${clamp(score, 7, 100)}%"></i></div>
-  </article>`;
-}
-
-function infoCard(title, value, label) {
-  return `<article class="metric-card info-card"><div class="metric-top"><span>${title}</span><em>성장기</em></div><strong>${value}</strong><p>${label}</p></article>`;
-}
-
-function updateDashboard() {
-  const data = getData();
-  const result = calc(data);
-  if (result.isYouth) {
-    document.querySelector("#greeting-name").textContent = `${data.name}님`;
-    document.querySelector("#score-block").innerHTML = `<div class="youth-score"><span>GROWING<br>STRONG</span><strong>성장기<br>모드</strong></div>`;
-    document.querySelector("#score-copy").innerHTML = `<p class="eyebrow">GROWTH CHECK</p><h2>숫자보다 성장이 먼저예요</h2><p>성장기에는 성인용 체지방·골격근량 계산식을 사용하지 않아요. 키와 체중 변화는 보호자·전문가와 함께 살펴보세요.</p>`;
-    document.querySelector("#metrics").innerHTML = [
-      metricCard("체질량지수", format(result.bmi), "BMI", "성장기 참고 수치", 55, "good"),
-      infoCard("체지방률", "추정하지 않음", "성장기에는 성인 공식이 맞지 않아요."),
-      infoCard("골격근량", "추정하지 않음", "실제 측정 장비가 필요해요."),
-      infoCard("건강 확인", "성장 곡선", "나이·성별 BMI 백분위로 확인해요."),
-    ].join("");
-    document.querySelector("#tips").innerHTML = `<li><span class="tip-icon meal">✦</span><div><strong>골고루 한 끼</strong><p>식사는 거르지 말고 다양한 음식을 먹어요.</p></div></li><li><span class="tip-icon walk">↗</span><div><strong>즐겁게 움직이기</strong><p>좋아하는 놀이와 운동으로 매일 몸을 움직여요.</p></div></li><li><span class="tip-icon sleep">☾</span><div><strong>충분한 잠</strong><p>성장과 회복을 위해 규칙적으로 쉬어요.</p></div></li>`;
-    document.querySelector(".disclaimer").textContent = "성장기에는 체지방률·골격근량을 이 앱에서 추정하지 않습니다. 어린이·청소년 BMI는 나이와 성별에 따른 성장 곡선 백분위로 의료진 또는 보호자와 함께 확인하세요.";
-    document.querySelector("#updated-time").textContent = new Intl.DateTimeFormat("ko-KR", { month: "long", day: "numeric", weekday: "short" }).format(new Date());
-    return;
-  }
-  document.querySelector("#greeting-name").textContent = `${data.name}님`;
-  document.querySelector("#score-block").innerHTML = ring(result.score);
-  document.querySelector("#score-copy").innerHTML = `<p class="eyebrow">오늘의 밸런스</p><h2>${result.status}</h2><p>현재 기록을 바탕으로 계산한 건강 균형 점수예요. 작은 변화도 꾸준히 기록해 보세요.</p>`;
-  document.querySelector("#metrics").innerHTML = [
-    metricCard("체질량지수", format(result.bmi), "BMI", bmiLabel(result.bmi), result.bmiScore, result.bmi >= 18.5 && result.bmi < 23 ? "good" : "care"),
-    metricCard("추정 체지방률", format(result.bodyFat), "%", `${result.fatRange[0]}–${result.fatRange[1]}% 참고`, result.fatScore, result.fatScore >= 75 ? "good" : "care"),
-    metricCard("추정 골격근량", format(result.muscle), "kg", `체중의 ${format(result.muscleRatio)}%`, result.muscleScore, result.muscleScore >= 72 ? "good" : "care"),
-    metricCard("적정 체중", `${format(result.targetWeight[0])}–${format(result.targetWeight[1])}`, "kg", "BMI 18.5–22.9 기준", result.bmiScore, result.bmi >= 18.5 && result.bmi < 23 ? "good" : "care"),
-  ].join("");
-
-  const tips = [];
-  if (result.bmi >= 23) tips.push(["식후 10분", "식사 뒤 가볍게 걸어 혈당과 체중 관리에 도움을 주세요.", "walk"]);
-  if (result.bodyFat > result.fatRange[1]) tips.push(["단백질 한 끼", "매 끼니 손바닥 크기만큼의 단백질을 먼저 챙겨 보세요.", "meal"]);
-  if (result.muscleScore < 72) tips.push(["주 2회 근력", "스쿼트, 푸시업처럼 큰 근육을 쓰는 운동부터 시작해요.", "strong"]);
-  if (tips.length < 3) tips.push(["수면 7시간", "규칙적인 취침 시간은 회복과 식욕 조절에 큰 도움이 됩니다.", "sleep"]);
-  if (tips.length < 3) tips.push(["물 한 컵", "식사 전 물 한 컵부터. 오늘의 수분 습관을 만들어 보세요.", "water"]);
-  document.querySelector("#tips").innerHTML = tips.slice(0, 3).map(([title, copy, icon]) => `<li><span class="tip-icon ${icon}">${icon === "walk" ? "↗" : icon === "meal" ? "✦" : icon === "strong" ? "◆" : icon === "sleep" ? "☾" : "≈"}</span><div><strong>${title}</strong><p>${copy}</p></div></li>`).join("");
-  document.querySelector("#updated-time").textContent = new Intl.DateTimeFormat("ko-KR", { month: "long", day: "numeric", weekday: "short" }).format(new Date());
+  const status = score >= 85 ? "아주 좋아요" : score >= 70 ? "균형 잡힌 편이에요" : "조금만 더 돌봐요";
+  scoreRing.innerHTML = `<div class="score-ring" style="--score:${score}"><div><strong>${score}</strong><span>HEALTH SCORE</span></div></div>`;
+  scoreCopy.innerHTML = `<p class="eyebrow">TODAY'S BALANCE</p><h2>${data.name}님, ${status}</h2><p>현재 입력 정보를 바탕으로 계산한 참고용 건강 균형 점수예요.</p>`;
+  metrics.innerHTML = metric("체질량지수", format(bmi), "BMI", bmi >= 18.5 && bmi < 23 ? "정상 범위" : "참고 필요", bmiScore, bmi >= 18.5 && bmi < 23 ? "good" : "care") + metric("추정 체지방률", format(bodyFat), "%", `${fatRange[0]}–${fatRange[1]}% 참고`, fatScore, fatScore > 74 ? "good" : "care") + metric("추정 골격근량", format(muscle), "kg", `체중의 ${format(muscleRatio)}%`, muscleScore) + metric("적정 체중", `${format(18.5 * (data.height / 100) ** 2)}–${format(22.9 * (data.height / 100) ** 2)}`, "kg", "BMI 기준", bmiScore);
+  disclaimer.textContent = "체지방률과 골격근량은 입력 정보로 계산한 참고용 추정치입니다. 실제 측정은 체성분 측정기 또는 전문가 상담이 필요해요.";
 }
 
 function setup() {
-  app.innerHTML = `
-    <div class="page-shell">
-      <header class="site-header">
-        <a class="brand" href="#top"><span class="brand-mark"><i></i><i></i><i></i></span><span>balance<span>check</span></span></a>
-        <div class="header-date"><span class="live-dot"></span><span id="updated-time"></span> 건강 기록</div>
-      </header>
-      <main id="top">
-        <section class="hero">
-          <div><p class="eyebrow">MY DAILY HEALTH REPORT</p><h1><span id="greeting-name">나님</span>의 몸이 보내는<br /><em>오늘의 신호</em>를 확인해요.</h1></div>
-          <p class="hero-copy">복잡한 숫자는 간결하게, 오늘 할 수 있는 건강 습관은 다정하게. 내 몸의 균형을 기록해 보세요.</p>
-        </section>
-        <section class="dashboard" aria-live="polite">
-          <div class="summary-card"><div id="score-block"></div><div id="score-copy"></div></div>
-          <div class="metric-grid" id="metrics"></div>
-        </section>
-        <section class="lower-grid">
-          <section class="form-card"><div class="section-heading"><div><p class="eyebrow">BODY PROFILE</p><h2>내 수치 입력하기</h2></div><span>입력 즉시 반영돼요</span></div>
-            <form id="profile-form">
-              <label class="wide">이름<input name="name" type="text" maxlength="12" value="${defaults.name}" /></label>
-              <label>성별<select name="sex"><option value="female">여성</option><option value="male">남성</option></select></label>
-              <label>나이<input name="age" type="number" min="2" max="120" value="${defaults.age}" /></label>
-              <label>키 <small>cm</small><input name="height" type="number" min="100" max="230" step=".1" value="${defaults.height}" /></label>
-              <label>체중 <small>kg</small><input name="weight" type="number" min="25" max="250" step=".1" value="${defaults.weight}" /></label>
-            </form>
-          </section>
-          <aside class="tips-card"><div class="section-heading"><div><p class="eyebrow">SMALL STEPS</p><h2>오늘의 제안</h2></div><span class="sun">☀</span></div><ul id="tips"></ul><p class="disclaimer">체지방률과 골격근량은 입력 정보로 계산한 참고용 추정치입니다. 실제 측정은 체성분 측정기 또는 의료·운동 전문가와 상담하세요.</p></aside>
-        </section>
-      </main>
-      <footer>balance check · 내 몸을 이해하는 가장 가벼운 시작</footer>
-    </div>`;
-  document.querySelector("#profile-form").addEventListener("input", updateDashboard);
-  document.querySelector("#profile-form").addEventListener("change", updateDashboard);
-  updateDashboard();
+  app.innerHTML = `<div class="page-shell">${nav()}<main>${page === "home" ? home() : page === "score" ? score() : recommendations()}</main><footer>balance check · 내 몸을 이해하는 가장 가벼운 시작</footer></div>`;
+  if (page === "score") { document.querySelector("#profile-form").addEventListener("input", updateScore); updateScore(); }
 }
-
 setup();
