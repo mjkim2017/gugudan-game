@@ -6,9 +6,6 @@ const defaults = {
   age: 29,
   height: 163,
   weight: 57.4,
-  bodyFat: 27.8,
-  muscle: 22.4,
-  waist: 72,
 };
 
 const number = (value, fallback = 0) => {
@@ -26,24 +23,26 @@ function getData() {
     age: number(form.get("age"), defaults.age),
     height: number(form.get("height"), defaults.height),
     weight: number(form.get("weight"), defaults.weight),
-    bodyFat: number(form.get("bodyFat"), defaults.bodyFat),
-    muscle: number(form.get("muscle"), defaults.muscle),
-    waist: number(form.get("waist"), defaults.waist),
   };
 }
 
 function calc(data) {
   const bmi = data.weight / ((data.height / 100) ** 2);
-  const whtr = data.waist / data.height;
   const fatRange = data.sex === "male" ? [10, 20] : [18, 28];
-  const muscleRatio = data.muscle / data.weight * 100;
+  // Population formulae are useful for a trend, but are not a body-composition measurement.
+  const bodyFat = clamp(1.2 * bmi + .23 * data.age - (data.sex === "male" ? 16.2 : 5.4), 5, 60);
+  const fatFreeMass = data.sex === "male"
+    ? 9270 * data.weight / (6680 + 216 * bmi)
+    : 9270 * data.weight / (8780 + 244 * bmi);
+  const muscle = fatFreeMass * (data.sex === "male" ? .58 : .56);
+  const muscleRatio = muscle / data.weight * 100;
   const bmiScore = 100 - Math.min(40, Math.abs(bmi - 22) * 8);
-  const waistScore = 100 - Math.min(40, Math.max(0, whtr - 0.45) * 180);
-  const fatScore = 100 - Math.min(45, Math.max(0, data.bodyFat - fatRange[1]) * 3) - Math.min(25, Math.max(0, fatRange[0] - data.bodyFat) * 3);
+  const fatScore = 100 - Math.min(45, Math.max(0, bodyFat - fatRange[1]) * 3) - Math.min(25, Math.max(0, fatRange[0] - bodyFat) * 3);
   const muscleScore = clamp(58 + (muscleRatio - 30) * 2.4, 30, 100);
-  const score = Math.round(clamp(bmiScore * .28 + waistScore * .27 + fatScore * .25 + muscleScore * .20, 0, 100));
+  const score = Math.round(clamp(bmiScore * .42 + fatScore * .33 + muscleScore * .25, 0, 100));
   const status = score >= 85 ? "아주 좋아요" : score >= 70 ? "균형 잡힌 편이에요" : score >= 55 ? "조금만 더 돌봐요" : "생활 습관을 점검해요";
-  return { bmi, whtr, fatRange, muscleRatio, bmiScore, waistScore, fatScore, muscleScore, score, status };
+  const targetWeight = [18.5, 22.9].map(value => value * ((data.height / 100) ** 2));
+  return { bmi, bodyFat, muscle, fatRange, muscleRatio, bmiScore, fatScore, muscleScore, score, status, targetWeight };
 }
 
 function bmiLabel(bmi) {
@@ -51,12 +50,6 @@ function bmiLabel(bmi) {
   if (bmi < 23) return "정상";
   if (bmi < 25) return "과체중";
   return "비만 범위";
-}
-
-function whtrLabel(whtr) {
-  if (whtr < .45) return "양호";
-  if (whtr < .5) return "주의";
-  return "관리 필요";
 }
 
 function ring(score) {
@@ -79,14 +72,14 @@ function updateDashboard() {
   document.querySelector("#score-copy").innerHTML = `<p class="eyebrow">오늘의 밸런스</p><h2>${result.status}</h2><p>현재 기록을 바탕으로 계산한 건강 균형 점수예요. 작은 변화도 꾸준히 기록해 보세요.</p>`;
   document.querySelector("#metrics").innerHTML = [
     metricCard("체질량지수", format(result.bmi), "BMI", bmiLabel(result.bmi), result.bmiScore, result.bmi >= 18.5 && result.bmi < 23 ? "good" : "care"),
-    metricCard("체지방률", format(data.bodyFat), "%", `${result.fatRange[0]}–${result.fatRange[1]}% 권장`, result.fatScore, result.fatScore >= 75 ? "good" : "care"),
-    metricCard("골격근량", format(data.muscle), "kg", `${format(result.muscleRatio)}% of body`, result.muscleScore, result.muscleScore >= 72 ? "good" : "care"),
-    metricCard("복부 비율", format(result.whtr), "WHtR", whtrLabel(result.whtr), result.waistScore, result.whtr < .5 ? "good" : "care"),
+    metricCard("추정 체지방률", format(result.bodyFat), "%", `${result.fatRange[0]}–${result.fatRange[1]}% 참고`, result.fatScore, result.fatScore >= 75 ? "good" : "care"),
+    metricCard("추정 골격근량", format(result.muscle), "kg", `체중의 ${format(result.muscleRatio)}%`, result.muscleScore, result.muscleScore >= 72 ? "good" : "care"),
+    metricCard("적정 체중", `${format(result.targetWeight[0])}–${format(result.targetWeight[1])}`, "kg", "BMI 18.5–22.9 기준", result.bmiScore, result.bmi >= 18.5 && result.bmi < 23 ? "good" : "care"),
   ].join("");
 
   const tips = [];
-  if (result.bmi >= 23 || result.whtr >= .5) tips.push(["식후 10분", "식사 뒤 가볍게 걸어 혈당과 복부 지방 관리에 도움을 주세요.", "walk"]);
-  if (data.bodyFat > result.fatRange[1]) tips.push(["단백질 한 끼", "매 끼니 손바닥 크기만큼의 단백질을 먼저 챙겨 보세요.", "meal"]);
+  if (result.bmi >= 23) tips.push(["식후 10분", "식사 뒤 가볍게 걸어 혈당과 체중 관리에 도움을 주세요.", "walk"]);
+  if (result.bodyFat > result.fatRange[1]) tips.push(["단백질 한 끼", "매 끼니 손바닥 크기만큼의 단백질을 먼저 챙겨 보세요.", "meal"]);
   if (result.muscleScore < 72) tips.push(["주 2회 근력", "스쿼트, 푸시업처럼 큰 근육을 쓰는 운동부터 시작해요.", "strong"]);
   if (tips.length < 3) tips.push(["수면 7시간", "규칙적인 취침 시간은 회복과 식욕 조절에 큰 도움이 됩니다.", "sleep"]);
   if (tips.length < 3) tips.push(["물 한 컵", "식사 전 물 한 컵부터. 오늘의 수분 습관을 만들어 보세요.", "water"]);
@@ -118,12 +111,9 @@ function setup() {
               <label>나이<input name="age" type="number" min="14" max="100" value="${defaults.age}" /></label>
               <label>키 <small>cm</small><input name="height" type="number" min="100" max="230" step=".1" value="${defaults.height}" /></label>
               <label>체중 <small>kg</small><input name="weight" type="number" min="25" max="250" step=".1" value="${defaults.weight}" /></label>
-              <label>체지방률 <small>%</small><input name="bodyFat" type="number" min="3" max="70" step=".1" value="${defaults.bodyFat}" /></label>
-              <label>골격근량 <small>kg</small><input name="muscle" type="number" min="5" max="100" step=".1" value="${defaults.muscle}" /></label>
-              <label class="wide">허리둘레 <small>cm</small><input name="waist" type="number" min="35" max="180" step=".1" value="${defaults.waist}" /></label>
             </form>
           </section>
-          <aside class="tips-card"><div class="section-heading"><div><p class="eyebrow">SMALL STEPS</p><h2>오늘의 제안</h2></div><span class="sun">☀</span></div><ul id="tips"></ul><p class="disclaimer">이 결과는 건강 습관 관리를 위한 참고용 추정치이며, 의료 진단이나 전문 상담을 대신하지 않습니다.</p></aside>
+          <aside class="tips-card"><div class="section-heading"><div><p class="eyebrow">SMALL STEPS</p><h2>오늘의 제안</h2></div><span class="sun">☀</span></div><ul id="tips"></ul><p class="disclaimer">체지방률과 골격근량은 입력 정보로 계산한 참고용 추정치입니다. 실제 측정은 체성분 측정기 또는 의료·운동 전문가와 상담하세요.</p></aside>
         </section>
       </main>
       <footer>balance check · 내 몸을 이해하는 가장 가벼운 시작</footer>
