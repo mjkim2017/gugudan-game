@@ -1,166 +1,136 @@
 const app = document.querySelector("#app");
 
-const map = [
-  [1,1,1,1,1,1,1,1,1,1,1,1,1],
-  [1,0,0,0,0,1,0,0,0,0,0,0,1],
-  [1,0,0,0,0,1,0,0,0,0,0,0,1],
-  [1,0,0,0,0,0,0,0,0,0,0,0,1],
-  [1,1,1,1,0,1,1,0,1,1,1,1,1],
-  [1,0,0,1,0,0,0,0,0,1,0,0,1],
-  [1,0,0,1,1,1,0,1,1,1,0,0,1],
-  [1,0,0,0,0,1,0,0,0,0,0,0,1],
-  [1,0,0,0,0,0,0,0,0,0,0,0,1],
-  [1,0,0,0,0,0,0,0,0,0,0,0,1],
-  [1,1,1,1,1,1,1,1,1,1,1,1,1],
-];
-
-const state = {
-  x: 2.5, y: 8.5, angle: -Math.PI / 2, pitch: 0,
-  keys: {}, flashlight: false, code: false, escaped: false,
-  notice: "낡은 집에 갇혔다. 손전등부터 찾아야 한다.",
-  lastTime: 0,
+const defaults = {
+  name: "나",
+  sex: "female",
+  age: 29,
+  height: 163,
+  weight: 57.4,
+  bodyFat: 27.8,
+  muscle: 22.4,
+  waist: 72,
 };
 
-const objects = [
-  { id: "flashlight", x: 2.5, y: 2.5, label: "손전등", color: "#f6d76b" },
-  { id: "note", x: 9.5, y: 2.5, label: "찢어진 메모", color: "#db8b72" },
-  { id: "door", x: 6.5, y: 9.35, label: "현관문", color: "#70483d" },
-];
-const decor = [
-  { id: "blood", x: 6.65, y: 3.35, color: "#711b1c", decor: true },
-  { id: "web", x: 7.35, y: 3.3, color: "#b9b5aa", decor: true },
-  { id: "web", x: 4.3, y: 7.3, color: "#b9b5aa", decor: true },
-];
+const number = (value, fallback = 0) => {
+  const parsed = Number.parseFloat(value);
+  return Number.isFinite(parsed) ? parsed : fallback;
+};
+const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
+const format = value => new Intl.NumberFormat("ko-KR", { maximumFractionDigits: 1 }).format(value);
+
+function getData() {
+  const form = new FormData(document.querySelector("#profile-form"));
+  return {
+    name: form.get("name")?.trim() || "나",
+    sex: form.get("sex"),
+    age: number(form.get("age"), defaults.age),
+    height: number(form.get("height"), defaults.height),
+    weight: number(form.get("weight"), defaults.weight),
+    bodyFat: number(form.get("bodyFat"), defaults.bodyFat),
+    muscle: number(form.get("muscle"), defaults.muscle),
+    waist: number(form.get("waist"), defaults.waist),
+  };
+}
+
+function calc(data) {
+  const bmi = data.weight / ((data.height / 100) ** 2);
+  const whtr = data.waist / data.height;
+  const fatRange = data.sex === "male" ? [10, 20] : [18, 28];
+  const muscleRatio = data.muscle / data.weight * 100;
+  const bmiScore = 100 - Math.min(40, Math.abs(bmi - 22) * 8);
+  const waistScore = 100 - Math.min(40, Math.max(0, whtr - 0.45) * 180);
+  const fatScore = 100 - Math.min(45, Math.max(0, data.bodyFat - fatRange[1]) * 3) - Math.min(25, Math.max(0, fatRange[0] - data.bodyFat) * 3);
+  const muscleScore = clamp(58 + (muscleRatio - 30) * 2.4, 30, 100);
+  const score = Math.round(clamp(bmiScore * .28 + waistScore * .27 + fatScore * .25 + muscleScore * .20, 0, 100));
+  const status = score >= 85 ? "아주 좋아요" : score >= 70 ? "균형 잡힌 편이에요" : score >= 55 ? "조금만 더 돌봐요" : "생활 습관을 점검해요";
+  return { bmi, whtr, fatRange, muscleRatio, bmiScore, waistScore, fatScore, muscleScore, score, status };
+}
+
+function bmiLabel(bmi) {
+  if (bmi < 18.5) return "저체중";
+  if (bmi < 23) return "정상";
+  if (bmi < 25) return "과체중";
+  return "비만 범위";
+}
+
+function whtrLabel(whtr) {
+  if (whtr < .45) return "양호";
+  if (whtr < .5) return "주의";
+  return "관리 필요";
+}
+
+function ring(score) {
+  return `<div class="score-ring" style="--score:${score}"><div><strong>${score}</strong><span>HEALTH SCORE</span></div></div>`;
+}
+
+function metricCard(title, value, unit, label, score, tone) {
+  return `<article class="metric-card ${tone}">
+    <div class="metric-top"><span>${title}</span><em>${label}</em></div>
+    <strong>${value}<small>${unit}</small></strong>
+    <div class="meter"><i style="width:${clamp(score, 7, 100)}%"></i></div>
+  </article>`;
+}
+
+function updateDashboard() {
+  const data = getData();
+  const result = calc(data);
+  document.querySelector("#greeting-name").textContent = `${data.name}님`;
+  document.querySelector("#score-block").innerHTML = ring(result.score);
+  document.querySelector("#score-copy").innerHTML = `<p class="eyebrow">오늘의 밸런스</p><h2>${result.status}</h2><p>현재 기록을 바탕으로 계산한 건강 균형 점수예요. 작은 변화도 꾸준히 기록해 보세요.</p>`;
+  document.querySelector("#metrics").innerHTML = [
+    metricCard("체질량지수", format(result.bmi), "BMI", bmiLabel(result.bmi), result.bmiScore, result.bmi >= 18.5 && result.bmi < 23 ? "good" : "care"),
+    metricCard("체지방률", format(data.bodyFat), "%", `${result.fatRange[0]}–${result.fatRange[1]}% 권장`, result.fatScore, result.fatScore >= 75 ? "good" : "care"),
+    metricCard("골격근량", format(data.muscle), "kg", `${format(result.muscleRatio)}% of body`, result.muscleScore, result.muscleScore >= 72 ? "good" : "care"),
+    metricCard("복부 비율", format(result.whtr), "WHtR", whtrLabel(result.whtr), result.waistScore, result.whtr < .5 ? "good" : "care"),
+  ].join("");
+
+  const tips = [];
+  if (result.bmi >= 23 || result.whtr >= .5) tips.push(["식후 10분", "식사 뒤 가볍게 걸어 혈당과 복부 지방 관리에 도움을 주세요.", "walk"]);
+  if (data.bodyFat > result.fatRange[1]) tips.push(["단백질 한 끼", "매 끼니 손바닥 크기만큼의 단백질을 먼저 챙겨 보세요.", "meal"]);
+  if (result.muscleScore < 72) tips.push(["주 2회 근력", "스쿼트, 푸시업처럼 큰 근육을 쓰는 운동부터 시작해요.", "strong"]);
+  if (tips.length < 3) tips.push(["수면 7시간", "규칙적인 취침 시간은 회복과 식욕 조절에 큰 도움이 됩니다.", "sleep"]);
+  if (tips.length < 3) tips.push(["물 한 컵", "식사 전 물 한 컵부터. 오늘의 수분 습관을 만들어 보세요.", "water"]);
+  document.querySelector("#tips").innerHTML = tips.slice(0, 3).map(([title, copy, icon]) => `<li><span class="tip-icon ${icon}">${icon === "walk" ? "↗" : icon === "meal" ? "✦" : icon === "strong" ? "◆" : icon === "sleep" ? "☾" : "≈"}</span><div><strong>${title}</strong><p>${copy}</p></div></li>`).join("");
+  document.querySelector("#updated-time").textContent = new Intl.DateTimeFormat("ko-KR", { month: "long", day: "numeric", weekday: "short" }).format(new Date());
+}
 
 function setup() {
   app.innerHTML = `
-    <section class="game-shell">
-      <header><div><p>ESCAPE ROOM · 03:17 AM</p><h1>새벽 3시의 집</h1></div><span class="help">WASD / 방향키 이동 · 마우스로 위아래 둘러보기 · E 조사</span></header>
-      <div class="viewport"><canvas id="game" aria-label="1인칭 3D 공포 탈출 게임"></canvas><div class="crosshair">+</div><div id="prompt" class="prompt"></div></div>
-      <section class="bottom-ui"><div class="mission"><p>MISSION</p><ol><li id="mission-1"><b>01</b> 손전등 찾기</li><li id="mission-2"><b>02</b> 비밀번호 알기</li><li id="mission-3"><b>03</b> 현관문 열기</li></ol></div><div class="notice" id="notice"></div><div class="controls"><button data-key="ArrowLeft">↶</button><button data-key="ArrowUp">▲</button><button data-key="ArrowRight">↷</button><button data-key="KeyE">조사 E</button></div></section>
-    </section>`;
-  const canvas = document.querySelector("#game");
-  const ctx = canvas.getContext("2d");
-  const wallTexture = new Image();
-  wallTexture.src = "assets/haunted-wall.png";
-  const prompt = document.querySelector("#prompt");
-
-  function resize() {
-    const rect = canvas.getBoundingClientRect();
-    canvas.width = Math.max(320, Math.floor(rect.width * devicePixelRatio));
-    canvas.height = Math.max(240, Math.floor(rect.height * devicePixelRatio));
-    ctx.setTransform(devicePixelRatio, 0, 0, devicePixelRatio, 0, 0);
-  }
-  addEventListener("resize", resize); resize();
-
-  addEventListener("keydown", event => {
-    state.keys[event.code] = true;
-    if (["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "Space"].includes(event.code)) event.preventDefault();
-    if (event.code === "KeyE") interact();
-  });
-  addEventListener("keyup", event => { state.keys[event.code] = false; });
-  document.querySelectorAll("[data-key]").forEach(button => {
-    const code = button.dataset.key;
-    button.addEventListener("pointerdown", () => { state.keys[code] = true; if (code === "KeyE") interact(); });
-    button.addEventListener("pointerup", () => { state.keys[code] = false; });
-    button.addEventListener("pointerleave", () => { state.keys[code] = false; });
-  });
-  canvas.addEventListener("click", () => canvas.requestPointerLock?.());
-  addEventListener("mousemove", event => { if (document.pointerLockElement === canvas) { state.angle += event.movementX * 0.0028; state.pitch = Math.max(-120, Math.min(120, state.pitch + event.movementY * .45)); } });
-
-  function cellOpen(x, y) { return map[Math.floor(y)]?.[Math.floor(x)] === 0; }
-  function move(distance) {
-    const nx = state.x + Math.cos(state.angle) * distance;
-    const ny = state.y + Math.sin(state.angle) * distance;
-    if (cellOpen(nx, state.y)) state.x = nx;
-    if (cellOpen(state.x, ny)) state.y = ny;
-  }
-  function nearestObject() {
-    return objects.find(object => !object.taken && Math.hypot(state.x - object.x, state.y - object.y) < 0.9);
-  }
-  function interact() {
-    const object = nearestObject();
-    if (!object) { state.notice = "가까이에서 조사할 물건이 없다."; return; }
-    if (object.id === "flashlight") { object.taken = true; state.flashlight = true; state.notice = "손전등을 찾았다. 어둠 속에 메모가 보일 것 같다."; }
-    if (object.id === "note") {
-      if (!state.flashlight) { state.notice = "메모가 어둠에 젖어 있다. 손전등이 필요하다."; return; }
-      object.taken = true; state.code = true; state.notice = "메모에 적힌 비밀번호는 0317. 현관문 잠금장치가 열릴 것이다.";
-    }
-    if (object.id === "door") {
-      if (!state.code) { state.notice = "잠겼다. 현관문을 열 비밀번호가 필요하다."; return; }
-      state.escaped = true; state.notice = "문이 열렸다. 비 냄새가 밀려온다.";
-    }
-    updateUi();
-  }
-  function updateUi() {
-    document.querySelector("#mission-1").classList.toggle("done", state.flashlight);
-    document.querySelector("#mission-2").classList.toggle("done", state.code);
-    document.querySelector("#mission-3").classList.toggle("done", state.escaped);
-    document.querySelector("#notice").textContent = state.notice;
-  }
-  function cast(angle) {
-    const dirX = Math.cos(angle), dirY = Math.sin(angle);
-    let mapX = Math.floor(state.x), mapY = Math.floor(state.y);
-    const deltaX = Math.abs(1 / (dirX || 0.00001)), deltaY = Math.abs(1 / (dirY || 0.00001));
-    let stepX, stepY, sideX, sideY;
-    if (dirX < 0) { stepX = -1; sideX = (state.x - mapX) * deltaX; } else { stepX = 1; sideX = (mapX + 1 - state.x) * deltaX; }
-    if (dirY < 0) { stepY = -1; sideY = (state.y - mapY) * deltaY; } else { stepY = 1; sideY = (mapY + 1 - state.y) * deltaY; }
-    let side = 0;
-    while (map[mapY]?.[mapX] !== 1) { if (sideX < sideY) { sideX += deltaX; mapX += stepX; side = 0; } else { sideY += deltaY; mapY += stepY; side = 1; } }
-    const distance = side === 0 ? sideX - deltaX : sideY - deltaY;
-    return { distance, side };
-  }
-  function visible(object) {
-    const dx = object.x - state.x, dy = object.y - state.y;
-    const dist = Math.hypot(dx, dy);
-    let diff = Math.atan2(dy, dx) - state.angle;
-    diff = Math.atan2(Math.sin(diff), Math.cos(diff));
-    return { dist, diff, show: Math.abs(diff) < Math.PI / 3 && cast(state.angle + diff).distance + .18 >= dist };
-  }
-  function drawSprite(object, width, height) {
-    if (object.taken) return;
-    const sight = visible(object); if (!sight.show) return;
-    const screenX = width / 2 + (sight.diff / (Math.PI / 3)) * width / 2;
-    const size = Math.min(height * .67, height / sight.dist * .72);
-    const bottom = height / 2 + state.pitch + size / 2;
-    ctx.save();
-    ctx.globalAlpha = Math.max(.36, 1 - sight.dist / 13);
-    ctx.shadowBlur = 25; ctx.shadowColor = object.color; ctx.fillStyle = object.color;
-    if (object.id === "blood") { ctx.fillStyle = "#6d191c"; ctx.beginPath(); ctx.arc(screenX, bottom - size * .55, size * .28, 0, Math.PI * 2); ctx.fill(); for (let i = -1; i < 2; i += 1) ctx.fillRect(screenX + i * size * .12, bottom - size * .42, size * .035, size * .27); }
-    else if (object.id === "web") { ctx.strokeStyle = "#c7c1afaa"; ctx.lineWidth = Math.max(1, size * .015); for (let i = 0; i < 4; i += 1) { ctx.beginPath(); ctx.moveTo(screenX - size*.35, bottom-size*.82+i*size*.13); ctx.lineTo(screenX + size*.34, bottom-size*.22-i*size*.12); ctx.stroke(); } ctx.beginPath(); ctx.arc(screenX, bottom-size*.5, size*.28, 0, Math.PI*2); ctx.stroke(); }
-    else if (object.id === "door") { ctx.fillRect(screenX - size * .36, bottom - size, size * .72, size); ctx.fillStyle = "#e8bd6c"; ctx.fillRect(screenX + size * .18, bottom - size * .49, size * .06, size * .06); }
-    else if (object.id === "flashlight") { ctx.fillRect(screenX - size * .12, bottom - size * .2, size * .24, size * .45); ctx.fillStyle = "#fff4b3"; ctx.fillRect(screenX - size * .18, bottom - size * .31, size * .36, size * .14); }
-    else { ctx.fillStyle = "#dfd5bd"; ctx.fillRect(screenX - size * .28, bottom - size * .66, size * .56, size * .72); ctx.fillStyle = "#8b3030"; ctx.fillRect(screenX - size * .18, bottom - size * .48, size * .36, size * .045); }
-    ctx.restore();
-  }
-  function render(time) {
-    const elapsed = Math.min(.05, (time - state.lastTime) / 1000 || 0); state.lastTime = time;
-    const turn = (state.keys.ArrowLeft || state.keys.KeyA ? -1 : 0) + (state.keys.ArrowRight || state.keys.KeyD ? 1 : 0);
-    state.angle += turn * elapsed * 2.1;
-    const walk = (state.keys.KeyW || state.keys.ArrowUp ? 1 : 0) + (state.keys.KeyS || state.keys.ArrowDown ? -1 : 0);
-    if (walk) move(walk * elapsed * 2.25);
-    const width = canvas.clientWidth, height = canvas.clientHeight, horizon = height / 2 + state.pitch;
-    ctx.clearRect(0, 0, width, height);
-    const sky = ctx.createLinearGradient(0, 0, 0, horizon); sky.addColorStop(0, "#040508"); sky.addColorStop(1, "#202128"); ctx.fillStyle = sky; ctx.fillRect(0, 0, width, horizon);
-    const floor = ctx.createLinearGradient(0, horizon, 0, height); floor.addColorStop(0, "#2a2020"); floor.addColorStop(1, "#050506"); ctx.fillStyle = floor; ctx.fillRect(0, horizon, width, height - horizon);
-    ctx.strokeStyle = "#6d565333"; ctx.lineWidth = 1; for (let x = -width; x < width * 2; x += 85) { ctx.beginPath(); ctx.moveTo(width / 2, horizon); ctx.lineTo(x, height); ctx.stroke(); } for (let i = 1; i < 12; i += 1) { const y = horizon + (height - horizon) * (i / 12) ** 2; ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(width, y); ctx.stroke(); }
-    const fov = Math.PI / 3; const rays = Math.ceil(width / 2);
-    for (let ray = 0; ray < rays; ray += 1) {
-      const angle = state.angle - fov / 2 + ray / rays * fov;
-      const hit = cast(angle); const corrected = hit.distance * Math.cos(angle - state.angle);
-      const wallHeight = Math.min(height * 1.8, height / corrected); const shade = Math.max(8, 48 - corrected * 8 - hit.side * 11);
-      ctx.fillStyle = `rgb(${shade + 18}, ${shade + 11}, ${shade + 14})`;
-      ctx.fillRect(ray * 2, horizon - wallHeight / 2, 2.3, wallHeight);
-      if (wallTexture.complete && wallTexture.naturalWidth) { ctx.globalAlpha = Math.max(.2, .68 - corrected * .08); ctx.drawImage(wallTexture, (ray * 7) % wallTexture.naturalWidth, 0, 2, wallTexture.naturalHeight, ray * 2, horizon - wallHeight / 2, 2.3, wallHeight); ctx.globalAlpha = 1; }
-      if (Math.sin(ray * 1.71 + hit.distance * 11) > .985) { ctx.fillStyle = "#5f1b1d"; ctx.fillRect(ray * 2, horizon - wallHeight * .16, 2.3, wallHeight * .38); }
-    }
-    [...objects, ...decor].sort((a, b) => Math.hypot(b.x-state.x,b.y-state.y)-Math.hypot(a.x-state.x,a.y-state.y)).forEach(item => drawSprite(item, width, height));
-    if (state.flashlight) { const glow = ctx.createRadialGradient(width/2,horizon,10,width/2,horizon,Math.max(width,height)*.72); glow.addColorStop(0, "#fff5cf1e"); glow.addColorStop(.36, "#f1db9d08"); glow.addColorStop(1, "#000000bb"); ctx.fillStyle=glow; ctx.fillRect(0,0,width,height); }
-    const object = nearestObject(); prompt.textContent = object ? `[ E ] ${object.label} 조사하기` : "";
-    if (state.escaped) { ctx.fillStyle = "#000b"; ctx.fillRect(0,0,width,height); ctx.fillStyle="#f1ead6"; ctx.textAlign="center"; ctx.font="800 38px serif"; ctx.fillText("탈출 성공", width/2, height/2); ctx.font="16px sans-serif"; ctx.fillText("새벽이 밝아오기 전에 집을 빠져나왔다.", width/2, height/2+38); }
-    requestAnimationFrame(render);
-  }
-  updateUi(); requestAnimationFrame(render);
+    <div class="page-shell">
+      <header class="site-header">
+        <a class="brand" href="#top"><span class="brand-mark"><i></i><i></i><i></i></span><span>balance<span>check</span></span></a>
+        <div class="header-date"><span class="live-dot"></span><span id="updated-time"></span> 건강 기록</div>
+      </header>
+      <main id="top">
+        <section class="hero">
+          <div><p class="eyebrow">MY DAILY HEALTH REPORT</p><h1><span id="greeting-name">나님</span>의 몸이 보내는<br /><em>오늘의 신호</em>를 확인해요.</h1></div>
+          <p class="hero-copy">복잡한 숫자는 간결하게, 오늘 할 수 있는 건강 습관은 다정하게. 내 몸의 균형을 기록해 보세요.</p>
+        </section>
+        <section class="dashboard" aria-live="polite">
+          <div class="summary-card"><div id="score-block"></div><div id="score-copy"></div></div>
+          <div class="metric-grid" id="metrics"></div>
+        </section>
+        <section class="lower-grid">
+          <section class="form-card"><div class="section-heading"><div><p class="eyebrow">BODY PROFILE</p><h2>내 수치 입력하기</h2></div><span>입력 즉시 반영돼요</span></div>
+            <form id="profile-form">
+              <label class="wide">이름<input name="name" type="text" maxlength="12" value="${defaults.name}" /></label>
+              <label>성별<select name="sex"><option value="female">여성</option><option value="male">남성</option></select></label>
+              <label>나이<input name="age" type="number" min="14" max="100" value="${defaults.age}" /></label>
+              <label>키 <small>cm</small><input name="height" type="number" min="100" max="230" step=".1" value="${defaults.height}" /></label>
+              <label>체중 <small>kg</small><input name="weight" type="number" min="25" max="250" step=".1" value="${defaults.weight}" /></label>
+              <label>체지방률 <small>%</small><input name="bodyFat" type="number" min="3" max="70" step=".1" value="${defaults.bodyFat}" /></label>
+              <label>골격근량 <small>kg</small><input name="muscle" type="number" min="5" max="100" step=".1" value="${defaults.muscle}" /></label>
+              <label class="wide">허리둘레 <small>cm</small><input name="waist" type="number" min="35" max="180" step=".1" value="${defaults.waist}" /></label>
+            </form>
+          </section>
+          <aside class="tips-card"><div class="section-heading"><div><p class="eyebrow">SMALL STEPS</p><h2>오늘의 제안</h2></div><span class="sun">☀</span></div><ul id="tips"></ul><p class="disclaimer">이 결과는 건강 습관 관리를 위한 참고용 추정치이며, 의료 진단이나 전문 상담을 대신하지 않습니다.</p></aside>
+        </section>
+      </main>
+      <footer>balance check · 내 몸을 이해하는 가장 가벼운 시작</footer>
+    </div>`;
+  document.querySelector("#profile-form").addEventListener("input", updateDashboard);
+  document.querySelector("#profile-form").addEventListener("change", updateDashboard);
+  updateDashboard();
 }
 
 setup();
