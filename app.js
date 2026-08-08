@@ -47,7 +47,7 @@ function updateRecommendations() {
   const movement = document.querySelector(".recommend-grid");
   const food = document.querySelector(".food-grid");
   if (profile.mode === "youth") {
-    heroCopy.textContent = `${profile.name}님의 성장기 모드에 맞춰, 즐겁게 움직이고 골고루 먹는 추천을 준비했어요.`;
+    heroCopy.textContent = `${profile.name}님의 성장 습관 점수 ${profile.score}점을 바탕으로, 즐겁게 움직이고 골고루 먹는 추천을 준비했어요.`;
     movement.innerHTML = movementCard("↗", "walk", "좋아하는 놀이", "20분", "달리기, 공놀이, 춤처럼 즐거운 움직임을 골라요.") + movementCard("⌇", "stretch", "가벼운 스트레칭", "5분", "목과 어깨를 천천히 풀어 주세요.") + movementCard("☾", "sleep", "규칙적인 잠", "매일", "성장과 회복을 위해 비슷한 시간에 쉬어요.");
     food.innerHTML = foodCard("01", "끼니 거르지 않기", "아침이나 점심을 거르지 않고 규칙적으로 먹어요.") + foodCard("02", "색깔 채소 더하기", "한 끼에 다른 색 채소를 하나씩 더해 봐요.") + foodCard("03", "물 마시기", "갈증이 나기 전에도 물을 조금씩 마셔요.");
     return;
@@ -65,7 +65,7 @@ function updateRecommendations() {
 function getData() {
   const form = new FormData(document.querySelector("#profile-form"));
   const value = (key, fallback) => Number.parseFloat(form.get(key)) || fallback;
-  return { name: form.get("name")?.trim() || "나", sex: form.get("sex"), age: value("age", defaults.age), height: value("height", defaults.height), weight: value("weight", defaults.weight) };
+  return { name: form.get("name")?.trim() || "나", sex: form.get("sex"), age: value("age", defaults.age), height: value("height", defaults.height), weight: value("weight", defaults.weight), sleep: value("sleep", 2), activity: value("activity", 2), meal: value("meal", 2) };
 }
 
 function metric(title, value, unit, label, level, type = "good") {
@@ -74,17 +74,18 @@ function metric(title, value, unit, label, level, type = "good") {
 
 function updateScore() {
   const data = getData();
+  document.querySelectorAll(".youth-habit").forEach(field => { field.hidden = data.age >= 20; });
   const bmi = data.weight / ((data.height / 100) ** 2);
   const scoreRing = document.querySelector("#score-ring");
   const scoreCopy = document.querySelector("#score-copy");
   const metrics = document.querySelector("#metrics");
   const disclaimer = document.querySelector("#disclaimer");
   if (data.age < 20) {
-    const growthScore = [data.age, data.height, data.weight].filter(value => Number.isFinite(value) && value > 0).length / 3 * 100;
-    scoreRing.innerHTML = `<div class="score-ring" style="--score:${growthScore}"><div><strong>${growthScore}</strong><span>GROWTH CHECK</span></div></div>`;
-    scoreCopy.innerHTML = `<p class="eyebrow">GROWTH CHECK</p><h2>${data.name}님, 성장이 먼저예요</h2><p>성장 기록 점수는 기본 정보가 완성됐는지 보여주는 점수예요. 건강 상태를 판정하지는 않아요.</p>`;
+    const growthScore = Math.round((data.sleep + data.activity + data.meal) / 9 * 100);
+    scoreRing.innerHTML = `<div class="score-ring" style="--score:${growthScore}"><div><strong>${growthScore}</strong><span>GROWTH HABITS</span></div></div>`;
+    scoreCopy.innerHTML = `<p class="eyebrow">GROWTH HABITS</p><h2>${data.name}님, 성장이 먼저예요</h2><p>수면·활동·식사 습관을 고르면 성장 습관 점수가 달라져요. 건강 상태를 판정하지는 않아요.</p>`;
     metrics.innerHTML = metric("체질량지수", format(bmi), "BMI", "성장기 참고 수치", 55) + metric("체지방률", "추정하지 않음", "", "성인 공식 미사용", 8, "muted") + metric("골격근량", "추정하지 않음", "", "측정 장비 필요", 8, "muted") + metric("건강 확인", "성장 곡선", "", "BMI 백분위 참고", 55);
-    disclaimer.textContent = "성장 기록 점수는 입력 상태를 나타내며 의료·건강 점수가 아닙니다. 어린이·청소년 BMI는 나이와 성별에 따른 성장 곡선 백분위로 확인해야 합니다.";
+    disclaimer.textContent = "성장 습관 점수는 수면·활동·식사에 대한 자기 체크 점수이며 의료·건강 점수가 아닙니다. 어린이·청소년 BMI는 나이와 성별에 따른 성장 곡선 백분위로 확인해야 합니다.";
     saveProfileForRecommendations({ mode: "youth", name: data.name, score: growthScore });
     return;
   }
@@ -107,7 +108,13 @@ function updateScore() {
 
 function setup() {
   app.innerHTML = `<div class="page-shell">${nav()}<main>${page === "home" ? home() : page === "score" ? score() : recommendations()}</main><footer>balance check · 내 몸을 이해하는 가장 가벼운 시작</footer></div>`;
-  if (page === "score") { document.querySelector("#profile-form").addEventListener("input", updateScore); updateScore(); }
+  if (page === "score") {
+    const form = document.querySelector("#profile-form");
+    form.insertAdjacentHTML("beforeend", `<label class="wide youth-habit">수면 습관<select name="sleep"><option value="1">조금 부족해요</option><option value="2" selected>보통이에요</option><option value="3">잘 지키고 있어요</option></select></label><label class="wide youth-habit">오늘의 활동<select name="activity"><option value="1">거의 못 움직였어요</option><option value="2" selected>조금 움직였어요</option><option value="3">즐겁게 움직였어요</option></select></label><label class="wide youth-habit">식사 습관<select name="meal"><option value="1">끼니를 자주 거르고 있어요</option><option value="2" selected>보통이에요</option><option value="3">골고루 잘 먹었어요</option></select></label>`);
+    form.addEventListener("input", updateScore);
+    form.addEventListener("change", updateScore);
+    updateScore();
+  }
   if (page === "recommendations") updateRecommendations();
 }
 setup();
