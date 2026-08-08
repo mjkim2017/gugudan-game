@@ -25,6 +25,19 @@ function saveProfileForRecommendations(profile) {
   try { localStorage.setItem("balance-check-profile", JSON.stringify(profile)); } catch { /* Storage can be disabled by the browser. */ }
 }
 
+function savedProfile() {
+  try { return JSON.parse(localStorage.getItem("balance-check-profile")); } catch { return null; }
+}
+
+function restoreSavedInputs(form) {
+  const inputs = savedProfile()?.inputs;
+  if (!inputs) return;
+  Object.entries(inputs).forEach(([key, value]) => {
+    const field = form.elements.namedItem(key);
+    if (field && value !== undefined && value !== null) field.value = value;
+  });
+}
+
 function movementCard(icon, tone, title, time, copy) {
   return `<article><span class="mini-icon ${tone}">${icon}</span><b>${title}</b><strong>${time}</strong><p>${copy}</p></article>`;
 }
@@ -34,8 +47,7 @@ function foodCard(number, title, copy) {
 }
 
 function updateRecommendations() {
-  let profile;
-  try { profile = JSON.parse(localStorage.getItem("balance-check-profile")); } catch { profile = null; }
+  const profile = savedProfile();
   const heroCopy = document.querySelector(".recommend-hero p:not(.eyebrow)");
   if (!profile) {
     heroCopy.textContent = "먼저 건강 점수에서 내 정보를 입력하면, 결과에 맞춰 운동과 식단을 추천해 드려요.";
@@ -86,7 +98,7 @@ function updateScore() {
     scoreCopy.innerHTML = `<p class="eyebrow">GROWTH HABITS</p><h2>${data.name}님, 성장이 먼저예요</h2><p>수면·활동·식사 습관을 고르면 성장 습관 점수가 달라져요. 건강 상태를 판정하지는 않아요.</p>`;
     metrics.innerHTML = metric("체질량지수", format(bmi), "BMI", "성장기 참고 수치", 55) + metric("체지방률", "추정하지 않음", "", "성인 공식 미사용", 8, "muted") + metric("골격근량", "추정하지 않음", "", "측정 장비 필요", 8, "muted") + metric("건강 확인", "성장 곡선", "", "BMI 백분위 참고", 55);
     disclaimer.textContent = "성장 습관 점수는 수면·활동·식사에 대한 자기 체크 점수이며 의료·건강 점수가 아닙니다. 어린이·청소년 BMI는 나이와 성별에 따른 성장 곡선 백분위로 확인해야 합니다.";
-    saveProfileForRecommendations({ mode: "youth", name: data.name, score: growthScore });
+    saveProfileForRecommendations({ mode: "youth", name: data.name, score: growthScore, inputs: data });
     return;
   }
   const fatRange = data.sex === "male" ? [10, 20] : [18, 28];
@@ -103,7 +115,7 @@ function updateScore() {
   scoreCopy.innerHTML = `<p class="eyebrow">TODAY'S BALANCE</p><h2>${data.name}님, ${status}</h2><p>현재 입력 정보를 바탕으로 계산한 참고용 건강 균형 점수예요.</p>`;
   metrics.innerHTML = metric("체질량지수", format(bmi), "BMI", bmi >= 18.5 && bmi < 23 ? "정상 범위" : "참고 필요", bmiScore, bmi >= 18.5 && bmi < 23 ? "good" : "care") + metric("추정 체지방률", format(bodyFat), "%", `${fatRange[0]}–${fatRange[1]}% 참고`, fatScore, fatScore > 74 ? "good" : "care") + metric("추정 골격근량", format(muscle), "kg", `체중의 ${format(muscleRatio)}%`, muscleScore) + metric("적정 체중", `${format(18.5 * (data.height / 100) ** 2)}–${format(22.9 * (data.height / 100) ** 2)}`, "kg", "BMI 기준", bmiScore);
   disclaimer.textContent = "체지방률과 골격근량은 입력 정보로 계산한 참고용 추정치입니다. 실제 측정은 체성분 측정기 또는 전문가 상담이 필요해요.";
-  saveProfileForRecommendations({ mode: "adult", name: data.name, score, fatHigh: bodyFat > fatRange[1], muscleLow: muscleScore < 72 });
+  saveProfileForRecommendations({ mode: "adult", name: data.name, score, fatHigh: bodyFat > fatRange[1], muscleLow: muscleScore < 72, inputs: data });
 }
 
 function setup() {
@@ -111,6 +123,8 @@ function setup() {
   if (page === "score") {
     const form = document.querySelector("#profile-form");
     form.insertAdjacentHTML("beforeend", `<label class="wide youth-habit">수면 습관<select name="sleep"><option value="1">조금 부족해요</option><option value="2" selected>보통이에요</option><option value="3">잘 지키고 있어요</option></select></label><label class="wide youth-habit">오늘의 활동<select name="activity"><option value="1">거의 못 움직였어요</option><option value="2" selected>조금 움직였어요</option><option value="3">즐겁게 움직였어요</option></select></label><label class="wide youth-habit">식사 습관<select name="meal"><option value="1">끼니를 자주 거르고 있어요</option><option value="2" selected>보통이에요</option><option value="3">골고루 잘 먹었어요</option></select></label>`);
+    restoreSavedInputs(form);
+    document.querySelector(".input-help").textContent = "입력 정보는 이 브라우저의 현재 기기에만 저장됩니다.";
     form.addEventListener("input", updateScore);
     form.addEventListener("change", updateScore);
     updateScore();
