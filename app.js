@@ -21,6 +21,47 @@ function recommendations() {
   return `<section class="page-title"><p class="eyebrow">SMALL STEPS, EVERY DAY</p><h1>운동·식단 추천</h1><p>완벽함보다 꾸준함. 오늘의 에너지를 채우는 쉬운 습관을 골라 보세요.</p></section><section class="recommend-hero"><div><span class="recommend-icon">↗</span><p class="eyebrow">MOVE YOUR BODY</p><h2>오늘은 10분만<br />움직여 볼까요?</h2><p>몸을 가볍게 깨우는 걷기와 스트레칭부터 시작해요.</p><a class="text-link" href="#movement">운동 살펴보기 →</a></div><div class="movement-lines"><i></i><i></i><i></i></div></section><section id="movement" class="recommend-section"><div class="section-heading"><div><p class="eyebrow">EASY MOVEMENT</p><h2>운동 추천</h2></div><span>하나만 골라도 충분해요</span></div><div class="recommend-grid"><article><span class="mini-icon walk">↗</span><b>산책</b><strong>10분</strong><p>식사 후 가볍게 걸으며 몸을 깨워요.</p></article><article><span class="mini-icon stretch">⌇</span><b>전신 스트레칭</b><strong>5분</strong><p>목, 어깨, 다리를 천천히 늘려 주세요.</p></article><article><span class="mini-icon strength">◆</span><b>의자 스쿼트</b><strong>8회 × 2</strong><p>무리하지 않는 범위에서 천천히 해요.</p></article></div></section><section id="food" class="food-section"><div class="section-heading"><div><p class="eyebrow">ONE BETTER PLATE</p><h2>식단 추천</h2></div><span>오늘 한 끼부터</span></div><div class="food-grid"><article><span>01</span><h3>채소를 반 접시</h3><p>색이 다른 채소를 곁들이면 한 끼가 더 든든해져요.</p></article><article><span>02</span><h3>단백질 먼저</h3><p>달걀, 두부, 생선, 콩처럼 익숙한 단백질을 챙겨요.</p></article><article><span>03</span><h3>물 한 컵</h3><p>달콤한 음료 대신 식사 전후 물을 마셔 보세요.</p></article></div><p class="disclaimer">개인 알레르기, 질환, 성장 상태에 따라 필요한 식단과 운동은 달라질 수 있어요. 불편함이 있으면 보호자 또는 전문가와 상담하세요.</p></section>`;
 }
 
+function saveProfileForRecommendations(profile) {
+  try { localStorage.setItem("balance-check-profile", JSON.stringify(profile)); } catch { /* Storage can be disabled by the browser. */ }
+}
+
+function movementCard(icon, tone, title, time, copy) {
+  return `<article><span class="mini-icon ${tone}">${icon}</span><b>${title}</b><strong>${time}</strong><p>${copy}</p></article>`;
+}
+
+function foodCard(number, title, copy) {
+  return `<article><span>${number}</span><h3>${title}</h3><p>${copy}</p></article>`;
+}
+
+function updateRecommendations() {
+  let profile;
+  try { profile = JSON.parse(localStorage.getItem("balance-check-profile")); } catch { profile = null; }
+  const heroCopy = document.querySelector(".recommend-hero p:not(.eyebrow)");
+  if (!profile) {
+    heroCopy.textContent = "먼저 건강 점수에서 내 정보를 입력하면, 결과에 맞춰 운동과 식단을 추천해 드려요.";
+    const scoreLink = document.querySelector(".recommend-hero .text-link");
+    scoreLink.href = "score.html";
+    scoreLink.textContent = "건강 점수 입력하기 →";
+    return;
+  }
+  const movement = document.querySelector(".recommend-grid");
+  const food = document.querySelector(".food-grid");
+  if (profile.mode === "youth") {
+    heroCopy.textContent = `${profile.name}님의 성장기 모드에 맞춰, 즐겁게 움직이고 골고루 먹는 추천을 준비했어요.`;
+    movement.innerHTML = movementCard("↗", "walk", "좋아하는 놀이", "20분", "달리기, 공놀이, 춤처럼 즐거운 움직임을 골라요.") + movementCard("⌇", "stretch", "가벼운 스트레칭", "5분", "목과 어깨를 천천히 풀어 주세요.") + movementCard("☾", "sleep", "규칙적인 잠", "매일", "성장과 회복을 위해 비슷한 시간에 쉬어요.");
+    food.innerHTML = foodCard("01", "끼니 거르지 않기", "아침이나 점심을 거르지 않고 규칙적으로 먹어요.") + foodCard("02", "색깔 채소 더하기", "한 끼에 다른 색 채소를 하나씩 더해 봐요.") + foodCard("03", "물 마시기", "갈증이 나기 전에도 물을 조금씩 마셔요.");
+    return;
+  }
+  heroCopy.textContent = `${profile.name}님의 건강 점수 ${profile.score}점을 바탕으로, 지금 가장 도움이 될 습관을 골랐어요.`;
+  const movementCards = profile.muscleLow
+    ? movementCard("◆", "strength", "의자 스쿼트", "8회 × 2", "근육을 쓰는 작은 움직임부터 시작해요.") + movementCard("↗", "walk", "가벼운 산책", "10분", "무리 없이 걷는 습관을 더해요.") + movementCard("⌇", "stretch", "전신 스트레칭", "5분", "운동 전후 몸을 천천히 풀어요.")
+    : movementCard("↗", "walk", "빠르게 걷기", "20분", "대화는 가능하지만 조금 숨찬 속도로 걸어요.") + movementCard("◆", "strength", "맨몸 근력", "10분", "스쿼트와 벽 푸시업을 천천히 해요.") + movementCard("⌇", "stretch", "전신 스트레칭", "5분", "운동 뒤 긴장을 부드럽게 풀어요.");
+  movement.innerHTML = movementCards;
+  food.innerHTML = profile.fatHigh
+    ? foodCard("01", "채소를 반 접시", "포만감을 위해 채소를 먼저 넉넉히 담아요.") + foodCard("02", "단백질 먼저", "달걀, 두부, 생선, 콩을 한 가지 챙겨요.") + foodCard("03", "물 한 컵", "달콤한 음료 대신 식사 전후 물을 마셔요.")
+    : foodCard("01", "단백질 한 가지", "매 끼니 익숙한 단백질을 하나씩 챙겨요.") + foodCard("02", "다양한 색 채소", "색깔이 다른 채소를 곁들이면 좋아요.") + foodCard("03", "규칙적인 식사", "너무 오래 굶지 말고 내 몸의 배고픔을 살펴요.");
+}
+
 function getData() {
   const form = new FormData(document.querySelector("#profile-form"));
   const value = (key, fallback) => Number.parseFloat(form.get(key)) || fallback;
@@ -44,6 +85,7 @@ function updateScore() {
     scoreCopy.innerHTML = `<p class="eyebrow">GROWTH CHECK</p><h2>${data.name}님, 성장이 먼저예요</h2><p>성장 기록 점수는 기본 정보가 완성됐는지 보여주는 점수예요. 건강 상태를 판정하지는 않아요.</p>`;
     metrics.innerHTML = metric("체질량지수", format(bmi), "BMI", "성장기 참고 수치", 55) + metric("체지방률", "추정하지 않음", "", "성인 공식 미사용", 8, "muted") + metric("골격근량", "추정하지 않음", "", "측정 장비 필요", 8, "muted") + metric("건강 확인", "성장 곡선", "", "BMI 백분위 참고", 55);
     disclaimer.textContent = "성장 기록 점수는 입력 상태를 나타내며 의료·건강 점수가 아닙니다. 어린이·청소년 BMI는 나이와 성별에 따른 성장 곡선 백분위로 확인해야 합니다.";
+    saveProfileForRecommendations({ mode: "youth", name: data.name, score: growthScore });
     return;
   }
   const fatRange = data.sex === "male" ? [10, 20] : [18, 28];
@@ -60,10 +102,12 @@ function updateScore() {
   scoreCopy.innerHTML = `<p class="eyebrow">TODAY'S BALANCE</p><h2>${data.name}님, ${status}</h2><p>현재 입력 정보를 바탕으로 계산한 참고용 건강 균형 점수예요.</p>`;
   metrics.innerHTML = metric("체질량지수", format(bmi), "BMI", bmi >= 18.5 && bmi < 23 ? "정상 범위" : "참고 필요", bmiScore, bmi >= 18.5 && bmi < 23 ? "good" : "care") + metric("추정 체지방률", format(bodyFat), "%", `${fatRange[0]}–${fatRange[1]}% 참고`, fatScore, fatScore > 74 ? "good" : "care") + metric("추정 골격근량", format(muscle), "kg", `체중의 ${format(muscleRatio)}%`, muscleScore) + metric("적정 체중", `${format(18.5 * (data.height / 100) ** 2)}–${format(22.9 * (data.height / 100) ** 2)}`, "kg", "BMI 기준", bmiScore);
   disclaimer.textContent = "체지방률과 골격근량은 입력 정보로 계산한 참고용 추정치입니다. 실제 측정은 체성분 측정기 또는 전문가 상담이 필요해요.";
+  saveProfileForRecommendations({ mode: "adult", name: data.name, score, fatHigh: bodyFat > fatRange[1], muscleLow: muscleScore < 72 });
 }
 
 function setup() {
   app.innerHTML = `<div class="page-shell">${nav()}<main>${page === "home" ? home() : page === "score" ? score() : recommendations()}</main><footer>balance check · 내 몸을 이해하는 가장 가벼운 시작</footer></div>`;
   if (page === "score") { document.querySelector("#profile-form").addEventListener("input", updateScore); updateScore(); }
+  if (page === "recommendations") updateRecommendations();
 }
 setup();
