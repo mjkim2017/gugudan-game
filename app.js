@@ -6,7 +6,7 @@ const format = value => new Intl.NumberFormat("ko-KR", { maximumFractionDigits: 
 
 function nav() {
   const links = [["home", "index.html", "홈"], ["score", "score.html", "건강 점수"], ["recommendations", "recommendations.html", "운동·식단 추천"]];
-  return `<header class="site-header"><a class="brand" href="index.html"><span class="brand-mark"><i></i><i></i><i></i></span><span>balance<span>check</span></span></a><nav>${links.map(([id, href, label]) => `<a class="${page === id ? "active" : ""}" href="${href}">${label}</a>`).join("")}</nav><span class="header-note"><i></i> 매일 한 걸음</span></header>`;
+  return `<header class="site-header"><a class="brand" href="index.html"><span class="brand-mark"><i></i><i></i><i></i></span><span>my body <span>health</span></span></a><nav>${links.map(([id, href, label]) => `<a class="${page === id ? "active" : ""}" href="${href}">${label}</a>`).join("")}</nav><span class="header-note"><i></i> 매일 한 걸음</span></header>`;
 }
 
 function home() {
@@ -127,7 +127,7 @@ function updateScore() {
 }
 
 function setup() {
-  app.innerHTML = `<div class="page-shell">${nav()}<main>${page === "home" ? home() : page === "score" ? score() : recommendations()}</main><footer>balance check · 내 몸을 이해하는 가장 가벼운 시작</footer></div>`;
+  app.innerHTML = `<div class="page-shell">${nav()}<main>${page === "home" ? home() : page === "score" ? score() : recommendations()}</main><footer>My Body Health · 내 몸을 이해하는 가장 가벼운 시작</footer></div>`;
   if (page === "score") {
     const form = document.querySelector("#profile-form");
     form.insertAdjacentHTML("beforeend", `<label class="wide youth-habit">수면 습관<select name="sleep"><option value="" selected>선택해 주세요</option><option value="1">조금 부족해요</option><option value="2">보통이에요</option><option value="3">잘 지키고 있어요</option></select></label><label class="wide youth-habit">오늘의 활동<select name="activity"><option value="" selected>선택해 주세요</option><option value="1">거의 못 움직였어요</option><option value="2">조금 움직였어요</option><option value="3">즐겁게 움직였어요</option></select></label><label class="wide youth-habit">식사 습관<select name="meal"><option value="" selected>선택해 주세요</option><option value="1">끼니를 자주 거르고 있어요</option><option value="2">보통이에요</option><option value="3">골고루 잘 먹었어요</option></select></label>`);
