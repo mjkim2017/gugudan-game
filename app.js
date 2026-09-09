@@ -14,7 +14,7 @@ function home() {
 }
 
 function score() {
-  return `<section class="page-title"><p class="eyebrow">BODY PROFILE</p><h1>오늘의 건강 점수</h1><p>키, 체중, 나이, 성별을 입력하면 참고용 균형 점수를 계산해요.</p></section><section class="score-layout"><section class="form-card"><div class="section-heading"><h2>내 정보 입력</h2><span>바로 반영돼요</span></div><form id="profile-form"><label class="wide">이름<input name="name" maxlength="12" value="${defaults.name}" /></label><label>성별<select name="sex"><option value="female">여성</option><option value="male">남성</option></select></label><label>나이<input name="age" type="number" min="2" max="120" value="${defaults.age}" /></label><label>키 <small>cm</small><input name="height" type="number" min="60" max="230" step=".1" value="${defaults.height}" /></label><label>체중 <small>kg</small><input name="weight" type="number" min="8" max="250" step=".1" value="${defaults.weight}" /></label></form><p class="input-help">개인 정보는 저장하지 않으며, 이 기기에서만 계산됩니다.</p></section><section class="score-card"><div id="score-ring"></div><div id="score-copy"></div></section></section><section class="metrics-section"><div class="section-heading"><div><p class="eyebrow">YOUR NUMBERS</p><h2>한눈에 보는 수치</h2></div></div><div class="metric-grid" id="metrics"></div><p class="disclaimer" id="disclaimer"></p></section>`;
+  return `<section class="page-title"><p class="eyebrow">BODY PROFILE</p><h1>오늘의 건강 점수</h1><p>키, 체중, 나이, 성별을 입력하면 참고용 균형 점수를 계산해요.</p></section><section class="score-layout"><section class="form-card"><div class="section-heading"><h2>내 정보 입력</h2><span>바로 반영돼요</span></div><form id="profile-form"><label class="wide">이름<input name="name" maxlength="12" value="${defaults.name}" /></label><label>성별<select name="sex"><option value="female">여성</option><option value="male">남성</option></select></label><label>나이<input name="age" type="number" min="2" max="120" value="${defaults.age}" /></label><label>키 <small>cm</small><input name="height" type="number" min="60" max="230" step=".1" value="${defaults.height}" /></label><label>체중 <small>kg</small><input name="weight" type="number" min="8" max="250" step=".1" value="${defaults.weight}" /></label></form><p class="input-help">개인 정보는 저장하지 않으며, 이 기기에서만 계산됩니다.</p></section><section class="score-card"><div id="score-ring"></div><div id="score-copy"></div></section></section><section class="metrics-section"><div class="section-heading"><div><p class="eyebrow">YOUR NUMBERS</p><h2>한눈에 보는 수치</h2></div></div><div class="metric-grid" id="metrics"></div><section class="health-summary" id="health-summary" aria-live="polite"></section><p class="disclaimer" id="disclaimer"></p></section>`;
 }
 
 function recommendations() {
@@ -97,6 +97,7 @@ function updateScore() {
   const scoreRing = document.querySelector("#score-ring");
   const scoreCopy = document.querySelector("#score-copy");
   const metrics = document.querySelector("#metrics");
+  const healthSummary = document.querySelector("#health-summary");
   const disclaimer = document.querySelector("#disclaimer");
   if (data.age < 20) {
     const habits = [data.sleep, data.activity, data.meal];
@@ -105,6 +106,7 @@ function updateScore() {
     scoreRing.innerHTML = growthScore === null ? `<div class="youth-score"><strong>—</strong><span>GROWTH HABITS</span></div>` : `<div class="score-ring" style="--score:${growthScore}"><div><strong>${growthScore}</strong><span>GROWTH HABITS</span></div></div>`;
     scoreCopy.innerHTML = `<p class="eyebrow">GROWTH HABITS</p><h2>${data.name}님, 성장이 먼저예요</h2><p>${habitsReady ? "수면·활동·식사 습관에 따라 성장 습관 점수가 달라져요." : "아래 수면·활동·식사 습관을 모두 선택하면 점수가 표시돼요."} 건강 상태를 판정하지는 않아요.</p>`;
     metrics.innerHTML = metric("체질량지수", format(bmi), "BMI", "성장기 참고 수치", 55) + metric("체지방률", "추정하지 않음", "", "성인 공식 미사용", 8, "muted") + metric("골격근량", "추정하지 않음", "", "측정 장비 필요", 8, "muted") + metric("건강 확인", "성장 곡선", "", "BMI 백분위 참고", 55);
+    healthSummary.innerHTML = `<div class="summary-icon">✦</div><div><p>성장기 안내</p><h3>좋다·나쁘다로 판단하지 않아요</h3><span>성장기에는 키·체중 변화와 생활 습관을 보호자 또는 전문가와 함께 살펴보는 것이 좋아요.</span></div>`;
     disclaimer.textContent = "성장 습관 점수는 수면·활동·식사에 대한 자기 체크 점수이며 의료·건강 점수가 아닙니다. 어린이·청소년 BMI는 나이와 성별에 따른 성장 곡선 백분위로 확인해야 합니다.";
     saveProfileForRecommendations({ mode: "youth", name: data.name, score: growthScore, inputs: data, growthScoreVersion: 2 });
     return;
@@ -119,15 +121,22 @@ function updateScore() {
   const muscleScore = clamp(58 + (muscleRatio - 30) * 2.4, 30, 100);
   const score = Math.round(clamp(bmiScore * .42 + fatScore * .33 + muscleScore * .25, 0, 100));
   const status = score >= 85 ? "아주 좋아요" : score >= 70 ? "균형 잡힌 편이에요" : "조금만 더 돌봐요";
+  const conclusion = score >= 85
+    ? ["좋은 편이에요", "현재 입력값 기준으로 몸의 균형이 대체로 좋아요. 지금의 생활 습관을 이어가 보세요.", "good"]
+    : score >= 70
+      ? ["대체로 괜찮아요", "크게 걱정할 수준으로 보이진 않지만, 운동·식단 추천을 참고해 한 가지 습관부터 챙겨 보세요.", "care"]
+      : ["생활 습관을 더 챙겨봐요", "현재 입력값에서 관리가 필요한 신호가 보여요. 추천을 참고하고, 걱정되는 점이 있으면 전문가와 상담하세요.", "care"];
   scoreRing.innerHTML = `<div class="score-ring" style="--score:${score}"><div><strong>${score}</strong><span>HEALTH SCORE</span></div></div>`;
   scoreCopy.innerHTML = `<p class="eyebrow">TODAY'S BALANCE</p><h2>${data.name}님, ${status}</h2><p>현재 입력 정보를 바탕으로 계산한 참고용 건강 균형 점수예요.</p>`;
   metrics.innerHTML = metric("체질량지수", format(bmi), "BMI", bmi >= 18.5 && bmi < 23 ? "정상 범위" : "참고 필요", bmiScore, bmi >= 18.5 && bmi < 23 ? "good" : "care") + metric("추정 체지방률", format(bodyFat), "%", `${fatRange[0]}–${fatRange[1]}% 참고`, fatScore, fatScore > 74 ? "good" : "care") + metric("추정 골격근량", format(muscle), "kg", `체중의 ${format(muscleRatio)}%`, muscleScore) + metric("적정 체중", `${format(18.5 * (data.height / 100) ** 2)}–${format(22.9 * (data.height / 100) ** 2)}`, "kg", "BMI 기준", bmiScore);
+  healthSummary.className = `health-summary ${conclusion[2]}`;
+  healthSummary.innerHTML = `<div class="summary-icon">${conclusion[2] === "good" ? "✓" : "!"}</div><div><p>결론 · 참고용 건강 상태</p><h3>${data.name}님은 현재 <strong>${conclusion[0]}</strong></h3><span>${conclusion[1]}</span></div>`;
   disclaimer.textContent = "체지방률과 골격근량은 입력 정보로 계산한 참고용 추정치입니다. 실제 측정은 체성분 측정기 또는 전문가 상담이 필요해요.";
   saveProfileForRecommendations({ mode: "adult", name: data.name, score, fatHigh: bodyFat > fatRange[1], muscleLow: muscleScore < 72, inputs: data });
 }
 
 function setup() {
-  app.innerHTML = `<div class="page-shell">${nav()}<main>${page === "home" ? home() : page === "score" ? score() : recommendations()}</main><footer>My Body BMG · 내 몸을 이해하는 가장 가벼운 시작</footer></div>`;
+  app.innerHTML = `<style>.health-summary{display:flex;gap:15px;align-items:flex-start;margin-top:14px;padding:22px;background:#edf5e8;border:1px solid #d9e7d1}.health-summary.care{background:#fbf3df;border-color:#eee0b8}.summary-icon{flex:0 0 36px;width:36px;height:36px;display:grid;place-items:center;border-radius:50%;background:#6f9e63;color:#fff;font:800 19px/1 "DM Sans",sans-serif}.care .summary-icon{background:#c59542}.health-summary p{margin:1px 0 6px;color:#729067;font:700 10px/1 "DM Sans",sans-serif;letter-spacing:1px}.care p{color:#a47836}.health-summary h3{margin:0 0 7px;font-size:18px;letter-spacing:-.6px}.health-summary h3 strong{color:#3b7d58}.care h3 strong{color:#a16f2c}.health-summary span{color:#65766e;font-size:12px;line-height:1.65}@media(max-width:420px){.health-summary{padding:17px;gap:11px}.health-summary h3{font-size:16px}.health-summary span{font-size:11px}}</style><div class="page-shell">${nav()}<main>${page === "home" ? home() : page === "score" ? score() : recommendations()}</main><footer>My Body BMG · 내 몸을 이해하는 가장 가벼운 시작</footer></div>`;
   if (page === "score") {
     const form = document.querySelector("#profile-form");
     form.insertAdjacentHTML("beforeend", `<label class="wide youth-habit">수면 습관<select name="sleep"><option value="" selected>선택해 주세요</option><option value="1">조금 부족해요</option><option value="2">보통이에요</option><option value="3">잘 지키고 있어요</option></select></label><label class="wide youth-habit">오늘의 활동<select name="activity"><option value="" selected>선택해 주세요</option><option value="1">거의 못 움직였어요</option><option value="2">조금 움직였어요</option><option value="3">즐겁게 움직였어요</option></select></label><label class="wide youth-habit">식사 습관<select name="meal"><option value="" selected>선택해 주세요</option><option value="1">끼니를 자주 거르고 있어요</option><option value="2">보통이에요</option><option value="3">골고루 잘 먹었어요</option></select></label>`);
