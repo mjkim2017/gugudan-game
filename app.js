@@ -1,151 +1,100 @@
 const app = document.querySelector("#app");
-const page = document.body.dataset.page || "home";
-const defaults = { name: "나", sex: "female", age: 29, height: 163, weight: 57.4 };
-const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
-const format = value => new Intl.NumberFormat("ko-KR", { maximumFractionDigits: 1 }).format(value);
+const operations = {
+  all: { label: "사칙연산", symbol: "＋ − × ÷", color: "all" },
+  add: { label: "덧셈", symbol: "＋", color: "add" },
+  subtract: { label: "뺄셈", symbol: "−", color: "subtract" },
+  multiply: { label: "곱셈", symbol: "×", color: "multiply" },
+  divide: { label: "나눗셈", symbol: "÷", color: "divide" }
+};
 
-function nav() {
-  const links = [["home", "index.html", "홈"], ["score", "score.html", "건강 점수"], ["recommendations", "recommendations.html", "운동·식단 추천"]];
-  return `<header class="site-header"><a class="brand" href="index.html"><span class="brand-mark"><i></i><i></i><i></i></span><span>my body <span>BMG</span></span></a><nav>${links.map(([id, href, label]) => `<a class="${page === id ? "active" : ""}" href="${href}">${label}</a>`).join("")}</nav><span class="header-note"><i></i> 매일 한 걸음</span></header>`;
-}
+let state = { mode: "all", level: 1, round: 0, score: 0, streak: 0, bestStreak: 0, questions: [], missed: [], answered: false };
 
-function home() {
-  return `<section class="home-hero"><div><p class="eyebrow">MY DAILY HEALTH COMPANION</p><h1>내 몸을 이해하는<br /><em>작고 건강한</em> 시작.</h1><p class="hero-copy">숫자는 간결하게 확인하고, 오늘 바로 실천할 운동과 식단을 찾아보세요.</p><a class="primary-button" href="score.html">내 건강 점수 확인하기 <b>→</b></a></div><div class="hero-art"><div class="sun-disc"></div><div class="leaf leaf-a">⌁</div><div class="leaf leaf-b">⌁</div><div class="hero-word">BREATHE<br /><span>MOVE</span><br />GROW</div></div></section><section class="page-intro"><p class="eyebrow">THREE SIMPLE STEPS</p><h2>오늘의 몸과 마음을<br />가볍게 돌봐요.</h2></section><section class="journey-grid"><a href="score.html" class="journey-card sage"><span>01</span><div class="card-icon">◌</div><h3>건강 점수</h3><p>키와 체중으로 나의 현재 균형을 확인해요.</p><b>점수 보기 →</b></a><a href="recommendations.html" class="journey-card cream"><span>02</span><div class="card-icon">↗</div><h3>운동 추천</h3><p>지금 할 수 있는 가벼운 움직임부터 시작해요.</p><b>운동 보기 →</b></a><a href="recommendations.html#food" class="journey-card peach"><span>03</span><div class="card-icon">✦</div><h3>식단 추천</h3><p>한 끼를 더 건강하게 만드는 작은 선택이에요.</p><b>식단 보기 →</b></a></section>`;
-}
+const random = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;
+const shuffle = values => [...values].sort(() => Math.random() - 0.5);
 
-function score() {
-  return `<section class="page-title"><p class="eyebrow">BODY PROFILE</p><h1>오늘의 건강 점수</h1><p>키, 체중, 나이, 성별을 입력하면 참고용 균형 점수를 계산해요.</p></section><section class="score-layout"><section class="form-card"><div class="section-heading"><h2>내 정보 입력</h2><span>바로 반영돼요</span></div><form id="profile-form"><label class="wide">이름<input name="name" maxlength="12" value="${defaults.name}" /></label><label>성별<select name="sex"><option value="female">여성</option><option value="male">남성</option></select></label><label>나이<input name="age" type="number" min="2" max="120" value="${defaults.age}" /></label><label>키 <small>cm</small><input name="height" type="number" min="60" max="230" step=".1" value="${defaults.height}" /></label><label>체중 <small>kg</small><input name="weight" type="number" min="8" max="250" step=".1" value="${defaults.weight}" /></label></form><p class="input-help">개인 정보는 저장하지 않으며, 이 기기에서만 계산됩니다.</p></section><section class="score-card"><div id="score-ring"></div><div id="score-copy"></div></section></section><section class="metrics-section"><div class="section-heading"><div><p class="eyebrow">YOUR NUMBERS</p><h2>한눈에 보는 수치</h2></div></div><div class="metric-grid" id="metrics"></div><section class="health-summary" id="health-summary" aria-live="polite"></section><p class="disclaimer" id="disclaimer"></p></section>`;
-}
-
-function recommendations() {
-  return `<section class="page-title"><p class="eyebrow">SMALL STEPS, EVERY DAY</p><h1>운동·식단 추천</h1><p>완벽함보다 꾸준함. 오늘의 에너지를 채우는 쉬운 습관을 골라 보세요.</p></section><section class="recommend-hero"><div><span class="recommend-icon">↗</span><p class="eyebrow">MOVE YOUR BODY</p><h2>오늘은 10분만<br />움직여 볼까요?</h2><p>몸을 가볍게 깨우는 걷기와 스트레칭부터 시작해요.</p><a class="text-link" href="#movement">운동 살펴보기 →</a></div><div class="movement-lines"><i></i><i></i><i></i></div></section><section id="movement" class="recommend-section"><div class="section-heading"><div><p class="eyebrow">EASY MOVEMENT</p><h2>운동 추천</h2></div><span>하나만 골라도 충분해요</span></div><div class="recommend-grid"><article><span class="mini-icon walk">↗</span><b>산책</b><strong>10분</strong><p>식사 후 가볍게 걸으며 몸을 깨워요.</p></article><article><span class="mini-icon stretch">⌇</span><b>전신 스트레칭</b><strong>5분</strong><p>목, 어깨, 다리를 천천히 늘려 주세요.</p></article><article><span class="mini-icon strength">◆</span><b>의자 스쿼트</b><strong>8회 × 2</strong><p>무리하지 않는 범위에서 천천히 해요.</p></article></div></section><section id="food" class="food-section"><div class="section-heading"><div><p class="eyebrow">ONE BETTER PLATE</p><h2>식단 추천</h2></div><span>오늘 한 끼부터</span></div><div class="food-grid"><article><span>01</span><h3>채소를 반 접시</h3><p>색이 다른 채소를 곁들이면 한 끼가 더 든든해져요.</p></article><article><span>02</span><h3>단백질 먼저</h3><p>달걀, 두부, 생선, 콩처럼 익숙한 단백질을 챙겨요.</p></article><article><span>03</span><h3>물 한 컵</h3><p>달콤한 음료 대신 식사 전후 물을 마셔 보세요.</p></article></div><p class="disclaimer">개인 알레르기, 질환, 성장 상태에 따라 필요한 식단과 운동은 달라질 수 있어요. 불편함이 있으면 보호자 또는 전문가와 상담하세요.</p></section>`;
-}
-
-function saveProfileForRecommendations(profile) {
-  try { localStorage.setItem("balance-check-profile", JSON.stringify(profile)); } catch { /* Storage can be disabled by the browser. */ }
-}
-
-function savedProfile() {
-  try { return JSON.parse(localStorage.getItem("balance-check-profile")); } catch { return null; }
-}
-
-function restoreSavedInputs(form) {
-  const profile = savedProfile();
-  const inputs = profile?.inputs;
-  if (!inputs) return;
-  Object.entries(inputs).forEach(([key, value]) => {
-    if (["sleep", "activity", "meal"].includes(key) && profile.growthScoreVersion !== 2) return;
-    const field = form.elements.namedItem(key);
-    if (field && value !== undefined && value !== null) field.value = value;
-  });
-}
-
-function movementCard(icon, tone, title, time, copy) {
-  return `<article><span class="mini-icon ${tone}">${icon}</span><b>${title}</b><strong>${time}</strong><p>${copy}</p></article>`;
-}
-
-function foodCard(number, title, copy) {
-  return `<article><span>${number}</span><h3>${title}</h3><p>${copy}</p></article>`;
-}
-
-function updateRecommendations() {
-  const profile = savedProfile();
-  const heroCopy = document.querySelector(".recommend-hero p:not(.eyebrow)");
-  if (!profile) {
-    heroCopy.textContent = "먼저 건강 점수에서 내 정보를 입력하면, 결과에 맞춰 운동과 식단을 추천해 드려요.";
-    const scoreLink = document.querySelector(".recommend-hero .text-link");
-    scoreLink.href = "score.html";
-    scoreLink.textContent = "건강 점수 입력하기 →";
-    return;
+function createQuestion(mode, level) {
+  const types = mode === "all" ? ["add", "subtract", "multiply", "divide"] : [mode];
+  const type = types[random(0, types.length - 1)];
+  const range = level === 1 ? 10 : level === 2 ? 20 : 50;
+  let left, right, answer, sign;
+  if (type === "add") {
+    left = random(1, range); right = random(1, range); answer = left + right; sign = "+";
+  } else if (type === "subtract") {
+    left = random(2, range); right = random(1, left); answer = left - right; sign = "−";
+  } else if (type === "multiply") {
+    left = random(2, level === 1 ? 5 : 9); right = random(2, level === 1 ? 5 : 9); answer = left * right; sign = "×";
+  } else {
+    right = random(2, level === 1 ? 5 : 9); answer = random(1, level === 1 ? 5 : 10); left = right * answer; sign = "÷";
   }
-  const movement = document.querySelector(".recommend-grid");
-  const food = document.querySelector(".food-grid");
-  if (profile.mode === "youth") {
-    heroCopy.textContent = profile.score === null ? `${profile.name}님, 먼저 성장 습관 세 가지를 고르면 맞춤 추천을 더 정확히 볼 수 있어요.` : `${profile.name}님의 성장 습관 점수 ${profile.score}점을 바탕으로, 즐겁게 움직이고 골고루 먹는 추천을 준비했어요.`;
-    movement.innerHTML = movementCard("↗", "walk", "좋아하는 놀이", "20분", "달리기, 공놀이, 춤처럼 즐거운 움직임을 골라요.") + movementCard("⌇", "stretch", "가벼운 스트레칭", "5분", "목과 어깨를 천천히 풀어 주세요.") + movementCard("☾", "sleep", "규칙적인 잠", "매일", "성장과 회복을 위해 비슷한 시간에 쉬어요.");
-    food.innerHTML = foodCard("01", "끼니 거르지 않기", "아침이나 점심을 거르지 않고 규칙적으로 먹어요.") + foodCard("02", "색깔 채소 더하기", "한 끼에 다른 색 채소를 하나씩 더해 봐요.") + foodCard("03", "물 마시기", "갈증이 나기 전에도 물을 조금씩 마셔요.");
-    return;
+  const wrongs = new Set();
+  while (wrongs.size < 3) {
+    const offset = random(-8, 8) || 2;
+    const candidate = Math.max(0, answer + offset);
+    if (candidate !== answer) wrongs.add(candidate);
   }
-  heroCopy.textContent = `${profile.name}님의 건강 점수 ${profile.score}점을 바탕으로, 지금 가장 도움이 될 습관을 골랐어요.`;
-  const movementCards = profile.muscleLow
-    ? movementCard("◆", "strength", "의자 스쿼트", "8회 × 2", "근육을 쓰는 작은 움직임부터 시작해요.") + movementCard("↗", "walk", "가벼운 산책", "10분", "무리 없이 걷는 습관을 더해요.") + movementCard("⌇", "stretch", "전신 스트레칭", "5분", "운동 전후 몸을 천천히 풀어요.")
-    : movementCard("↗", "walk", "빠르게 걷기", "20분", "대화는 가능하지만 조금 숨찬 속도로 걸어요.") + movementCard("◆", "strength", "맨몸 근력", "10분", "스쿼트와 벽 푸시업을 천천히 해요.") + movementCard("⌇", "stretch", "전신 스트레칭", "5분", "운동 뒤 긴장을 부드럽게 풀어요.");
-  movement.innerHTML = movementCards;
-  food.innerHTML = profile.fatHigh
-    ? foodCard("01", "채소를 반 접시", "포만감을 위해 채소를 먼저 넉넉히 담아요.") + foodCard("02", "단백질 먼저", "달걀, 두부, 생선, 콩을 한 가지 챙겨요.") + foodCard("03", "물 한 컵", "달콤한 음료 대신 식사 전후 물을 마셔요.")
-    : foodCard("01", "단백질 한 가지", "매 끼니 익숙한 단백질을 하나씩 챙겨요.") + foodCard("02", "다양한 색 채소", "색깔이 다른 채소를 곁들이면 좋아요.") + foodCard("03", "규칙적인 식사", "너무 오래 굶지 말고 내 몸의 배고픔을 살펴요.");
+  return { type, left, right, answer, sign, choices: shuffle([answer, ...wrongs]) };
 }
 
-function getData() {
-  const form = new FormData(document.querySelector("#profile-form"));
-  const value = (key, fallback) => Number.parseFloat(form.get(key)) || fallback;
-  const habit = key => {
-    const parsed = Number.parseFloat(form.get(key));
-    return [1, 2, 3].includes(parsed) ? parsed : null;
-  };
-  return { name: form.get("name")?.trim() || "나", sex: form.get("sex"), age: value("age", defaults.age), height: value("height", defaults.height), weight: value("weight", defaults.weight), sleep: habit("sleep"), activity: habit("activity"), meal: habit("meal") };
+function begin(mode = state.mode, level = state.level) {
+  state = { mode, level, round: 0, score: 0, streak: 0, bestStreak: 0, questions: Array.from({ length: 10 }, () => createQuestion(mode, level)), missed: [], answered: false };
+  renderGame();
 }
 
-function metric(title, value, unit, label, level, type = "good") {
-  return `<article class="metric-card ${type}"><div><span>${title}</span><em>${label}</em></div><strong>${value}<small>${unit}</small></strong><i class="meter"><b style="width:${clamp(level, 8, 100)}%"></b></i></article>`;
+function current() { return state.questions[state.round]; }
+function best() { try { return Number(localStorage.getItem("math-sprint-best")) || 0; } catch { return 0; } }
+function saveBest(value) { try { localStorage.setItem("math-sprint-best", String(Math.max(value, best()))); } catch { /* storage unavailable */ } }
+
+function renderGame() {
+  const question = current();
+  const progress = Math.round(state.round / state.questions.length * 100);
+  app.innerHTML = `
+    <div class="shapes" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div>
+    <header class="topbar"><a class="logo" href="index.html"><span>＋</span> MATH SPRINT</a><div class="best">최고 연속 정답 <b>${best()}</b> 🔥</div></header>
+    <section class="game-shell">
+      <aside class="mission-panel">
+        <p class="kicker">NUMBER ADVENTURE</p><h1>오늘의<br><em>계산 미션!</em></h1>
+        <p class="mission-copy">문제를 풀어 에너지를 모으고 계산 실력을 키워요.</p>
+        <div class="choice-label">연산 선택</div>
+        <div class="operation-picker">${Object.entries(operations).map(([key, operation]) => `<button class="${state.mode === key ? "selected " + operation.color : ""}" data-mode="${key}"><b>${operation.symbol}</b>${operation.label}</button>`).join("")}</div>
+        <div class="choice-label level-label">난이도</div>
+        <div class="level-picker">${[1, 2, 3].map(level => `<button class="${state.level === level ? "selected" : ""}" data-level="${level}">${level === 1 ? "쉬움" : level === 2 ? "보통" : "도전"}</button>`).join("")}</div>
+        <div class="score-card"><div class="energy">⚡</div><div><b>${state.score}</b><span>에너지</span></div><div><b>${state.streak}</b><span>연속 정답</span></div></div>
+      </aside>
+      <section class="quiz-panel" aria-live="polite">
+        <div class="quiz-meta"><span>QUESTION ${String(state.round + 1).padStart(2, "0")} / 10</span><span class="operation-tag ${question.type}">${operations[question.type].label}</span></div>
+        <div class="progress"><i style="width:${progress}%"></i></div>
+        <div class="question-card"><p>빈칸에 들어갈 숫자를 골라요</p><div class="equation"><strong>${question.left}</strong><span>${question.sign}</span><strong>${question.right}</strong><span>=</span><b>?</b></div></div>
+        <div class="answers">${question.choices.map((value, index) => `<button data-answer="${value}" ${state.answered ? "disabled" : ""}><span>${["A", "B", "C", "D"][index]}</span>${value}</button>`).join("")}</div>
+        <div id="feedback" class="feedback" hidden></div><button id="next" class="next" hidden>다음 문제 <span>→</span></button>
+      </section>
+    </section><footer>MATH SPRINT · 매일 조금씩, 계산력은 쑥쑥</footer>`;
+  app.querySelectorAll("[data-mode]").forEach(button => button.addEventListener("click", () => begin(button.dataset.mode, state.level)));
+  app.querySelectorAll("[data-level]").forEach(button => button.addEventListener("click", () => begin(state.mode, Number(button.dataset.level))));
+  app.querySelectorAll("[data-answer]").forEach(button => button.addEventListener("click", () => answer(button)));
 }
 
-function updateScore() {
-  const data = getData();
-  document.querySelectorAll(".youth-habit").forEach(field => { field.hidden = data.age >= 20; });
-  const bmi = data.weight / ((data.height / 100) ** 2);
-  const scoreRing = document.querySelector("#score-ring");
-  const scoreCopy = document.querySelector("#score-copy");
-  const metrics = document.querySelector("#metrics");
-  const healthSummary = document.querySelector("#health-summary");
-  const disclaimer = document.querySelector("#disclaimer");
-  if (data.age < 20) {
-    const habits = [data.sleep, data.activity, data.meal];
-    const habitsReady = habits.every(Number.isFinite);
-    const growthScore = habitsReady ? Math.round(habits.reduce((sum, value) => sum + value, 0) / 9 * 100) : null;
-    scoreRing.innerHTML = growthScore === null ? `<div class="youth-score"><strong>—</strong><span>GROWTH HABITS</span></div>` : `<div class="score-ring" style="--score:${growthScore}"><div><strong>${growthScore}</strong><span>GROWTH HABITS</span></div></div>`;
-    scoreCopy.innerHTML = `<p class="eyebrow">GROWTH HABITS</p><h2>${data.name}님, 성장이 먼저예요</h2><p>${habitsReady ? "수면·활동·식사 습관에 따라 성장 습관 점수가 달라져요." : "아래 수면·활동·식사 습관을 모두 선택하면 점수가 표시돼요."} 건강 상태를 판정하지는 않아요.</p>`;
-    metrics.innerHTML = metric("체질량지수", format(bmi), "BMI", "성장기 참고 수치", 55) + metric("체지방률", "추정하지 않음", "", "성인 공식 미사용", 8, "muted") + metric("골격근량", "추정하지 않음", "", "측정 장비 필요", 8, "muted") + metric("건강 확인", "성장 곡선", "", "BMI 백분위 참고", 55);
-    healthSummary.innerHTML = `<div class="summary-icon">✦</div><div><p>성장기 안내</p><h3>좋다·나쁘다로 판단하지 않아요</h3><span>성장기에는 키·체중 변화와 생활 습관을 보호자 또는 전문가와 함께 살펴보는 것이 좋아요.</span></div>`;
-    disclaimer.textContent = "성장 습관 점수는 수면·활동·식사에 대한 자기 체크 점수이며 의료·건강 점수가 아닙니다. 어린이·청소년 BMI는 나이와 성별에 따른 성장 곡선 백분위로 확인해야 합니다.";
-    saveProfileForRecommendations({ mode: "youth", name: data.name, score: growthScore, inputs: data, growthScoreVersion: 2 });
-    return;
-  }
-  const fatRange = data.sex === "male" ? [10, 20] : [18, 28];
-  const bodyFat = clamp(1.2 * bmi + .23 * data.age - (data.sex === "male" ? 16.2 : 5.4), 5, 60);
-  const fatFreeMass = data.sex === "male" ? 9270 * data.weight / (6680 + 216 * bmi) : 9270 * data.weight / (8780 + 244 * bmi);
-  const muscle = fatFreeMass * (data.sex === "male" ? .58 : .56);
-  const muscleRatio = muscle / data.weight * 100;
-  const bmiScore = 100 - Math.min(40, Math.abs(bmi - 22) * 8);
-  const fatScore = 100 - Math.min(45, Math.max(0, bodyFat - fatRange[1]) * 3);
-  const muscleScore = clamp(58 + (muscleRatio - 30) * 2.4, 30, 100);
-  const score = Math.round(clamp(bmiScore * .42 + fatScore * .33 + muscleScore * .25, 0, 100));
-  const status = score >= 85 ? "아주 좋아요" : score >= 70 ? "균형 잡힌 편이에요" : "조금만 더 돌봐요";
-  const conclusion = score >= 85
-    ? ["좋은 편이에요", "현재 입력값 기준으로 몸의 균형이 대체로 좋아요. 지금의 생활 습관을 이어가 보세요.", "good"]
-    : score >= 70
-      ? ["대체로 괜찮아요", "크게 걱정할 수준으로 보이진 않지만, 운동·식단 추천을 참고해 한 가지 습관부터 챙겨 보세요.", "care"]
-      : ["생활 습관을 더 챙겨봐요", "현재 입력값에서 관리가 필요한 신호가 보여요. 추천을 참고하고, 걱정되는 점이 있으면 전문가와 상담하세요.", "care"];
-  scoreRing.innerHTML = `<div class="score-ring" style="--score:${score}"><div><strong>${score}</strong><span>HEALTH SCORE</span></div></div>`;
-  scoreCopy.innerHTML = `<p class="eyebrow">TODAY'S BALANCE</p><h2>${data.name}님, ${status}</h2><p>현재 입력 정보를 바탕으로 계산한 참고용 건강 균형 점수예요.</p>`;
-  metrics.innerHTML = metric("체질량지수", format(bmi), "BMI", bmi >= 18.5 && bmi < 23 ? "정상 범위" : "참고 필요", bmiScore, bmi >= 18.5 && bmi < 23 ? "good" : "care") + metric("추정 체지방률", format(bodyFat), "%", `${fatRange[0]}–${fatRange[1]}% 참고`, fatScore, fatScore > 74 ? "good" : "care") + metric("추정 골격근량", format(muscle), "kg", `체중의 ${format(muscleRatio)}%`, muscleScore) + metric("적정 체중", `${format(18.5 * (data.height / 100) ** 2)}–${format(22.9 * (data.height / 100) ** 2)}`, "kg", "BMI 기준", bmiScore);
-  healthSummary.className = `health-summary ${conclusion[2]}`;
-  healthSummary.innerHTML = `<div class="summary-icon">${conclusion[2] === "good" ? "✓" : "!"}</div><div><p>결론 · 참고용 건강 상태</p><h3>${data.name}님은 현재 <strong>${conclusion[0]}</strong></h3><span>${conclusion[1]}</span></div>`;
-  disclaimer.textContent = "체지방률과 골격근량은 입력 정보로 계산한 참고용 추정치입니다. 실제 측정은 체성분 측정기 또는 전문가 상담이 필요해요.";
-  saveProfileForRecommendations({ mode: "adult", name: data.name, score, fatHigh: bodyFat > fatRange[1], muscleLow: muscleScore < 72, inputs: data });
+function answer(button) {
+  if (state.answered) return;
+  state.answered = true;
+  const question = current();
+  const correct = Number(button.dataset.answer) === question.answer;
+  const choices = app.querySelectorAll("[data-answer]");
+  choices.forEach(choice => { choice.disabled = true; if (Number(choice.dataset.answer) === question.answer) choice.classList.add("correct"); });
+  if (correct) {
+    state.streak += 1; state.bestStreak = Math.max(state.bestStreak, state.streak); state.score += 10 + Math.min(state.streak - 1, 5) * 2; saveBest(state.bestStreak);
+  } else { state.streak = 0; state.missed.push(question); button.classList.add("wrong"); }
+  const feedback = app.querySelector("#feedback");
+  feedback.hidden = false; feedback.className = `feedback ${correct ? "yes" : "no"}`;
+  feedback.innerHTML = correct ? `<b>정답! 에너지를 얻었어요 ⚡</b><span>${question.left} ${question.sign} ${question.right} = ${question.answer}</span>` : `<b>아쉬워요. 정답은 ${question.answer}이에요.</b><span>${question.left} ${question.sign} ${question.right} = ${question.answer}</span>`;
+  const next = app.querySelector("#next"); next.hidden = false; next.addEventListener("click", nextQuestion);
 }
 
-function setup() {
-  app.innerHTML = `<style>.health-summary{display:flex;gap:15px;align-items:flex-start;margin-top:14px;padding:22px;background:#edf5e8;border:1px solid #d9e7d1}.health-summary.care{background:#fbf3df;border-color:#eee0b8}.summary-icon{flex:0 0 36px;width:36px;height:36px;display:grid;place-items:center;border-radius:50%;background:#6f9e63;color:#fff;font:800 19px/1 "DM Sans",sans-serif}.care .summary-icon{background:#c59542}.health-summary p{margin:1px 0 6px;color:#729067;font:700 10px/1 "DM Sans",sans-serif;letter-spacing:1px}.care p{color:#a47836}.health-summary h3{margin:0 0 7px;font-size:18px;letter-spacing:-.6px}.health-summary h3 strong{color:#3b7d58}.care h3 strong{color:#a16f2c}.health-summary span{color:#65766e;font-size:12px;line-height:1.65}@media(max-width:420px){.health-summary{padding:17px;gap:11px}.health-summary h3{font-size:16px}.health-summary span{font-size:11px}}</style><div class="page-shell">${nav()}<main>${page === "home" ? home() : page === "score" ? score() : recommendations()}</main><footer>My Body BMG · 내 몸을 이해하는 가장 가벼운 시작</footer></div>`;
-  if (page === "score") {
-    const form = document.querySelector("#profile-form");
-    form.insertAdjacentHTML("beforeend", `<label class="wide youth-habit">수면 습관<select name="sleep"><option value="" selected>선택해 주세요</option><option value="1">조금 부족해요</option><option value="2">보통이에요</option><option value="3">잘 지키고 있어요</option></select></label><label class="wide youth-habit">오늘의 활동<select name="activity"><option value="" selected>선택해 주세요</option><option value="1">거의 못 움직였어요</option><option value="2">조금 움직였어요</option><option value="3">즐겁게 움직였어요</option></select></label><label class="wide youth-habit">식사 습관<select name="meal"><option value="" selected>선택해 주세요</option><option value="1">끼니를 자주 거르고 있어요</option><option value="2">보통이에요</option><option value="3">골고루 잘 먹었어요</option></select></label>`);
-    restoreSavedInputs(form);
-    document.querySelector(".input-help").textContent = "입력 정보는 이 브라우저의 현재 기기에만 저장됩니다.";
-    form.addEventListener("input", updateScore);
-    form.addEventListener("change", updateScore);
-    updateScore();
-  }
-  if (page === "recommendations") updateRecommendations();
+function nextQuestion() { if (state.round === 9) renderResult(); else { state.round += 1; state.answered = false; renderGame(); } }
+
+function renderResult() {
+  const correct = 10 - state.missed.length;
+  app.innerHTML = `<div class="shapes" aria-hidden="true"><i></i><i></i><i></i></div><header class="topbar"><a class="logo" href="index.html"><span>＋</span> MATH SPRINT</a></header><section class="result-card"><div class="trophy">★</div><p class="kicker">MISSION COMPLETE</p><h1>계산 미션 완료!</h1><p>10문제 중 <b>${correct}문제</b>를 맞히고 에너지 <b>${state.score}</b>점을 모았어요.</p><div class="result-stats"><div><b>${correct}/10</b><span>정답 수</span></div><div><b>${state.bestStreak}</b><span>최고 연속 정답</span></div><div><b>${state.score}</b><span>에너지</span></div></div>${state.missed.length ? `<section class="review"><h2>다시 풀어 보면 좋은 문제</h2>${state.missed.map(question => `<article><b>${question.left} ${question.sign} ${question.right}</b><span>= ${question.answer}</span><small>${operations[question.type].label}</small></article>`).join("")}</section>` : `<p class="perfect">모든 문제 정답! 정말 대단해요 🌟</p>`}<button class="next replay" id="replay">다시 도전하기 <span>↻</span></button></section><footer>MATH SPRINT · 매일 조금씩, 계산력은 쑥쑥</footer>`;
+  app.querySelector("#replay").addEventListener("click", () => begin(state.mode, state.level));
 }
-setup();
+
+begin();
