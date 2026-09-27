@@ -82,10 +82,10 @@ function answer(button) {
   choices.forEach(choice => { choice.disabled = true; if (Number(choice.dataset.answer) === question.answer) choice.classList.add("correct"); });
   if (correct) {
     state.streak += 1; state.bestStreak = Math.max(state.bestStreak, state.streak); state.score += 10 + Math.min(state.streak - 1, 5) * 2; saveBest(state.bestStreak);
-  } else { state.streak = 0; state.missed.push(question); button.classList.add("wrong"); }
+  } else { state.streak = 0; state.score = Math.max(0, state.score - 1); state.missed.push(question); button.classList.add("wrong"); }
   const feedback = app.querySelector("#feedback");
   feedback.hidden = false; feedback.className = `feedback ${correct ? "yes" : "no"}`;
-  feedback.innerHTML = correct ? `<b>정답! 에너지를 얻었어요 ⚡</b><span>${question.left} ${question.sign} ${question.right} = ${question.answer}</span>` : `<b>아쉬워요. 정답은 ${question.answer}이에요.</b><span>${question.left} ${question.sign} ${question.right} = ${question.answer}</span>`;
+  feedback.innerHTML = correct ? `<b>정답! 에너지를 얻었어요 ⚡</b><span>${question.left} ${question.sign} ${question.right} = ${question.answer}</span>` : `<b>아쉬워요. 정답은 ${question.answer}이에요. 에너지는 1점만 줄어들어요.</b><span>${question.left} ${question.sign} ${question.right} = ${question.answer}</span>`;
   const next = app.querySelector("#next"); next.hidden = false; next.addEventListener("click", nextQuestion);
 }
 
