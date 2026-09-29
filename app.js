@@ -81,7 +81,7 @@ function answer(button) {
   const choices = app.querySelectorAll("[data-answer]");
   choices.forEach(choice => { choice.disabled = true; if (Number(choice.dataset.answer) === question.answer) choice.classList.add("correct"); });
   if (correct) {
-    state.streak += 1; state.bestStreak = Math.max(state.bestStreak, state.streak); state.score += 10 + Math.min(state.streak - 1, 5) * 2; saveBest(state.bestStreak);
+    state.streak += 1; state.bestStreak = Math.max(state.bestStreak, state.streak); state.score += 1; saveBest(state.bestStreak);
   } else { state.streak = 0; state.score = Math.max(0, state.score - 1); state.missed.push(question); button.classList.add("wrong"); }
   const feedback = app.querySelector("#feedback");
   feedback.hidden = false; feedback.className = `feedback ${correct ? "yes" : "no"}`;
