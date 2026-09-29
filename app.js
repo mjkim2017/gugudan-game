@@ -49,7 +49,7 @@ function renderGame() {
   const progress = Math.round(state.round / state.questions.length * 100);
   app.innerHTML = `
     <div class="shapes" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div>
-    <header class="topbar"><a class="logo" href="index.html"><span>＋</span> MATH SPRINT</a><div class="best">최고 연속 정답 <b>${best()}</b> 🔥</div></header>
+    <header class="topbar"><a class="logo" href="index.html"><span>＋</span> MATH MASTER</a><div class="best">최고 연속 정답 <b>${best()}</b> 🔥</div></header>
     <section class="game-shell">
       <aside class="mission-panel">
         <p class="kicker">NUMBER ADVENTURE</p><h1>오늘의<br><em>계산 미션!</em></h1>
@@ -67,7 +67,7 @@ function renderGame() {
         <div class="answers">${question.choices.map((value, index) => `<button data-answer="${value}" ${state.answered ? "disabled" : ""}><span>${["A", "B", "C", "D"][index]}</span>${value}</button>`).join("")}</div>
         <div id="feedback" class="feedback" hidden></div><button id="next" class="next" hidden>다음 문제 <span>→</span></button>
       </section>
-    </section><footer>MATH SPRINT · 매일 조금씩, 계산력은 쑥쑥</footer>`;
+    </section><footer>MATH MASTER · 매일 조금씩, 계산력은 쑥쑥</footer>`;
   app.querySelectorAll("[data-mode]").forEach(button => button.addEventListener("click", () => begin(button.dataset.mode, state.level)));
   app.querySelectorAll("[data-level]").forEach(button => button.addEventListener("click", () => begin(state.mode, Number(button.dataset.level))));
   app.querySelectorAll("[data-answer]").forEach(button => button.addEventListener("click", () => answer(button)));
@@ -93,7 +93,7 @@ function nextQuestion() { if (state.round === 9) renderResult(); else { state.ro
 
 function renderResult() {
   const correct = 10 - state.missed.length;
-  app.innerHTML = `<div class="shapes" aria-hidden="true"><i></i><i></i><i></i></div><header class="topbar"><a class="logo" href="index.html"><span>＋</span> MATH SPRINT</a></header><section class="result-card"><div class="trophy">★</div><p class="kicker">MISSION COMPLETE</p><h1>계산 미션 완료!</h1><p>10문제 중 <b>${correct}문제</b>를 맞히고 에너지 <b>${state.score}</b>점을 모았어요.</p><div class="result-stats"><div><b>${correct}/10</b><span>정답 수</span></div><div><b>${state.bestStreak}</b><span>최고 연속 정답</span></div><div><b>${state.score}</b><span>에너지</span></div></div>${state.missed.length ? `<section class="review"><h2>다시 풀어 보면 좋은 문제</h2>${state.missed.map(question => `<article><b>${question.left} ${question.sign} ${question.right}</b><span>= ${question.answer}</span><small>${operations[question.type].label}</small></article>`).join("")}</section>` : `<p class="perfect">모든 문제 정답! 정말 대단해요 🌟</p>`}<button class="next replay" id="replay">다시 도전하기 <span>↻</span></button></section><footer>MATH SPRINT · 매일 조금씩, 계산력은 쑥쑥</footer>`;
+  app.innerHTML = `<div class="shapes" aria-hidden="true"><i></i><i></i><i></i></div><header class="topbar"><a class="logo" href="index.html"><span>＋</span> MATH MASTER</a></header><section class="result-card"><div class="trophy">★</div><p class="kicker">MISSION COMPLETE</p><h1>계산 미션 완료!</h1><p>10문제 중 <b>${correct}문제</b>를 맞히고 에너지 <b>${state.score}</b>점을 모았어요.</p><div class="result-stats"><div><b>${correct}/10</b><span>정답 수</span></div><div><b>${state.bestStreak}</b><span>최고 연속 정답</span></div><div><b>${state.score}</b><span>에너지</span></div></div>${state.missed.length ? `<section class="review"><h2>다시 풀어 보면 좋은 문제</h2>${state.missed.map(question => `<article><b>${question.left} ${question.sign} ${question.right}</b><span>= ${question.answer}</span><small>${operations[question.type].label}</small></article>`).join("")}</section>` : `<p class="perfect">모든 문제 정답! 정말 대단해요 🌟</p>`}<button class="next replay" id="replay">다시 도전하기 <span>↻</span></button></section><footer>MATH MASTER · 매일 조금씩, 계산력은 쑥쑥</footer>`;
   app.querySelector("#replay").addEventListener("click", () => begin(state.mode, state.level));
 }
 
